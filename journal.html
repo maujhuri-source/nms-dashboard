@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Journey — newmomstuff.com</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Palatino Linotype', Palatino, Georgia, serif;
+      background: linear-gradient(160deg, #1E1528 0%, #2A1F35 40%, #1E1528 100%);
+      color: #F7F3EF;
+      min-height: 100vh;
+      padding: 20px 16px 40px;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #D97757, #E67E50);
+      border-radius: 100px;
+      padding: 5px 16px;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: white;
+      margin-bottom: 8px;
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: normal;
+      margin: 0 0 3px;
+      background: linear-gradient(135deg, #F7F3EF, #EDE8E2);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+    .subtitle {
+      color: rgba(255,255,255,0.26);
+      font-size: 11px;
+    }
+    .back-link {
+      position: absolute;
+      top: 20px;
+      left: 16px;
+      color: rgba(255,255,255,0.35);
+      font-size: 11px;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .back-link:hover {
+      color: rgba(255,255,255,0.6);
+    }
+    .empty-state {
+      background: linear-gradient(135deg, rgba(93,78,109,0.55), rgba(61,46,74,0.75));
+      border: 1px solid rgba(217,119,87,0.2);
+      border-radius: 16px;
+      padding: 40px 24px;
+      text-align: center;
+      margin-top: 20px;
+    }
+    .empty-state-icon {
+      font-size: 32px;
+      margin-bottom: 12px;
+      opacity: 0.4;
+    }
+    .empty-state h2 {
+      font-size: 18px;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 12px;
+    }
+    .empty-state p {
+      font-size: 13px;
+      color: rgba(255,255,255,0.4);
+      line-height: 1.6;
+    }
+    .month-label {
+      color: rgba(255,255,255,0.25);
+      font-size: 9px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin: 24px 0 8px;
+    }
+    .entry-card {
+      background: #5D4E6D;
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 12px;
+      border-left: 4px solid;
+      animation: fadeIn 0.6s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .entry-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .entry-date {
+      font-size: 13px;
+      font-weight: bold;
+    }
+    .entry-content {
+      font-size: 13px;
+      line-height: 1.6;
+      color: rgba(255,255,255,0.8);
+    }
+    .section-title {
+      color: rgba(255,255,255,0.5);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-top: 14px;
+      margin-bottom: 6px;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .stat-box {
+      background: rgba(255,255,255,0.03);
+      border-radius: 8px;
+      padding: 8px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 14px;
+      font-weight: bold;
+      color: #F7F3EF;
+    }
+    .stat-label {
+      font-size: 9px;
+      color: rgba(255,255,255,0.35);
+    }
+    footer {
+      text-align: center;
+      margin-top: 30px;
+      color: rgba(255,255,255,0.15);
+      font-size: 9px;
+    }
+  </style>
+</head>
+<body>
+  <a href="./index.html" class="back-link">← Mission Control</a>
+  <div class="header">
+    <div class="badge">newmomstuff.com</div>
+    <h1>The Journey</h1>
+    <div class="subtitle">A record of every week building toward freedom</div>
+    <div class="subtitle" style="margin-top:4px">Started April 2026</div>
+  </div>
+
+  <div id="journal-entries">
+    <!-- Entries will be prepended here by ARJUN -->
+    <div class="empty-state">
+      <div class="empty-state-icon">✨</div>
+      <h2>Your first week's reflection will appear here.</h2>
+      <p>Close your first week in Mission Control to begin your journey log. Every entry is evidence of growth for your Flippa listing.</p>
+    </div>
+  </div>
+
+  <footer>
+    newmomstuff.com Exit Dashboard · The Journey
+  </footer>
+
+  <script>
+    // Load journal entries from dashboard-data.json
+    fetch('./dashboard-data.json')
+      .then(res => res.json())
+      .then(data => {
+        const entries = data.journal || [];
+        if (entries.length === 0) return;
+
+        const container = document.getElementById('journal-entries');
+        container.innerHTML = '';
+
+        // Group by month? For simplicity, just show all entries newest first
+        entries.reverse().forEach(entry => {
+          const card = document.createElement('div');
+          card.className = 'entry-card';
+          // Determine border color based on month
+          const date = new Date(entry.closedAt);
+          const month = date.getMonth(); // 0-indexed
+          const colors = ['#7BA895', '#D97757', '#5D4E6D', '#C4956A', '#185FA5', '#7BA895', '#5D4E6D'];
+          const color = colors[month] || '#7BA895';
+          card.style.borderLeftColor = color;
+
+          let html = `
+            <div class="entry-header">
+              <div class="entry-date">📅 Week of ${entry.weekLabel || date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+            </div>
+            <div class="section-title">🎯 This Week's Focus</div>
+            <div class="entry-content" style="font-style:italic">${entry.focus || ''}</div>
+            <div class="section-title">💬 Reflection</div>
+            <div class="entry-content">${entry.reflection || ''}</div>
+          `;
+          if (entry.wins && entry.wins.length > 0) {
+            html += `<div class="section-title">🏅 Wins</div>`;
+            entry.wins.forEach(win => {
+              html += `<div class="entry-content">• ${win.text} · ${new Date(win.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>`;
+            });
+          }
+          if (entry.weeklyGrowth) {
+            const g = entry.weeklyGrowth;
+            html += `<div class="section-title">📌 Pinterest This Week</div>
+              <div class="stats-grid">
+                <div class="stat-box"><div class="stat-value">${g.impressions?.toLocaleString() || 0}</div><div class="stat-label">Impressions</div></div>
+                <div class="stat-box"><div class="stat-value">${g.clicks?.toLocaleString() || 0}</div><div class="stat-label">Clicks</div></div>
+                <div class="stat-box"><div class="stat-value">${g.saves?.toLocaleString() || 0}</div><div class="stat-label">Saves</div></div>
+                <div class="stat-box"><div class="stat-value">${g.impressions ? ((g.clicks/g.impressions)*100).toFixed(2)+'%' : '—'}</div><div class="stat-label">CTR</div></div>
+              </div>`;
+          }
+          if (entry.snapshot) {
+            const s = entry.snapshot;
+            html += `<div class="section-title">📊 Snapshot</div>
+              <div class="stats-grid">
+                <div class="stat-box"><div class="stat-value">${s.pageviews?.toLocaleString() || 0}</div><div class="stat-label">Pageviews</div></div>
+                <div class="stat-box"><div class="stat-value">${s.postsPublished || 0}</div><div class="stat-label">Posts</div></div>
+                <div class="stat-box"><div class="stat-value">${s.revenue ? '$'+s.revenue : '$0'}</div><div class="stat-label">Revenue</div></div>
+                <div class="stat-box"><div class="stat-value">${s.emailSubs || 0}</div><div class="stat-label">Email Subs</div></div>
+              </div>`;
+            const val = (s.revenue || 0) * 35;
+            if (val > 0) {
+              html += `<div style="margin-top:10px; text-align:center; color: #7BA895; font-size:12px;">💰 Est. Flippa Value: ~$${val.toLocaleString()}</div>`;
+            }
+          }
+          html += `<div style="border-top:1px solid rgba(255,255,255,0.05); margin-top:14px; padding-top:10px; color:rgba(255,255,255,0.3); font-size:9px; text-align:center">Closed ${new Date(entry.closedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} · newmomstuff.com</div>`;
+          card.innerHTML = html;
+          container.appendChild(card);
+        });
+      })
+      .catch(err => console.log('Could not load journal entries:', err));
+  </script>
+</body>
+</html>

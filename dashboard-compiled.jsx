@@ -1,0 +1,1244 @@
+const { useState, useCallback, useEffect } = React;
+
+const STORAGE_KEY = "dashboard_main_v8";
+const GROWTH_KEY  = "dashboard_growth_v8";
+
+const DEFAULT_DATA = {
+  pageviews: 500, revenue: 0, postsPublished: 0, pinsLive: 0,
+  emailSubs: 0, toolsBuilt: 0,
+  pinterestImpressions: 0, pinterestOutboundClicks: 0, pinterestSaves: 0,
+  wins: [], currentWeekFocus: "", currentWeekLabel: "", journal: [],
+  analytics: {
+    ga4Sessions: 0,
+    ga4TopPost: "",
+    ga4TopPostViews: 0,
+    ga4WeekOnWeekChange: 0,
+    gscAvgPosition: 0,
+    gscClicks: 0,
+    gscTopQuery: "",
+    lastUpdated: ""
+  },
+  lastUpdated: null,
+};
+
+const GOALS = {
+  pageviews: 50000, revenue: 500, postsPublished: 30, pinsLive: 40,
+  emailSubs: 2000, toolsBuilt: 7,
+  pinterestImpressions: 500000, pinterestOutboundClicks: 5000, pinterestSaves: 2000,
+};
+
+const USD_TO_INR = 83.5;
+const FLIPPA_TARGET = 20000;
+
+const C = {
+  terracotta:"#D97757", jade:"#7BA895", plum:"#5D4E6D", cream:"#F7F3EF",
+  persimmon:"#E67E50", darkPlum:"#3D2E4A", midPlum:"#4A3A5C",
+  lightJade:"#A8C9BC", dustyCream:"#EDE8E2", pink:"#E8847A",
+};
+
+const QUOTES = [
+  "Every post published is a brick in the house you're building.",
+  "Pinterest impressions are just attention warming up.",
+  "The debt shrinks one pin at a time.",
+  "Impressions become clicks. Clicks become traffic. Traffic becomes freedom.",
+  "ARJUN is working. You're building. ₹15 lakh is coming.",
+  "Seasonal content published today will pay you in May.",
+  "You don't need to see the whole staircase. Just the next step.",
+];
+
+const MONTHS = [
+  { id:"apr", label:"April", short:"APR", theme:"Foundation", color:"#7BA895",
+    targets:{pageviews:"1,000+",email:"10+",revenue:"$5–15",posts:"8 live",pins:"20 pins"},
+    milestones:[
+      {t:"All 5 Mother's Day posts live",urgent:true},
+      {t:"Postpartum gift basket post live",done:true},
+      {t:"Ezoic setup complete and ads live",urgent:true},
+      {t:"Amazon affiliate links on all live posts",done:true},
+      {t:"Brevo account created + opt-in form live",urgent:true},
+      {t:"Sleep Schedule Tracker PDF lead magnet created"},
+      {t:"20 Pinterest pins uploaded"},
+      {t:"Sitemap resubmitted to Google Search Console",done:true},
+      {t:"ARJUN: Simplified Ideogram prompts file created"},
+      {t:"Workflow files reorganised (tasks, log, decisions)"},
+    ],
+    arjunTasks:["Finish content calendar batch (posts up to Day 7+)","Reorganise workflow files — clean ARJUN-TASKS.md and MY-TASKS.md","Create /skills/ideogram-prompts.md with brand palette + simplified prompts","Create Newborn Sleep Schedule Tracker PDF lead magnet","Top 10 post update priority list from audit","Brevo setup instructions + WordPress embed guide","Ezoic WordPress setup step-by-step guide"]
+  },
+  { id:"may", label:"May", short:"MAY", theme:"Pinterest Surge", color:"#D97757",
+    targets:{pageviews:"3,000+",email:"50+",revenue:"$20–40",posts:"8 new",pins:"24 pins"},
+    milestones:[
+      {t:"Mother's Day traffic spike visible in GA4"},
+      {t:"8 new posts published from content calendar"},
+      {t:"1 old post updated and republished per week"},
+      {t:"24 Pinterest pins uploaded this month"},
+      {t:"First email subscribers from lead magnet"},
+      {t:"First Amazon affiliate click recorded"},
+      {t:"Weekly GA4 check routine started"},
+    ],
+    arjunTasks:["Write 8 new posts from calendar (Days 8–15)","3-email Brevo welcome sequence drafted","Update top 2 old posts from audit priority list","Pin specs for all May posts (with simplified Ideogram prompts)"]
+  },
+  { id:"jun", label:"June", short:"JUN", theme:"Content Blitz", color:"#5D4E6D",
+    targets:{pageviews:"10,000+",email:"200+",revenue:"$50–100",posts:"12 posts",pins:"24 pins"},
+    milestones:[
+      {t:"Wake Window Calculator tool live on site"},
+      {t:"Apply to Ezoic (10K pageviews threshold)"},
+      {t:"First real ad revenue from Ezoic"},
+      {t:"8 old posts updated and republished"},
+      {t:"12 new posts published"},
+      {t:"200 email subscribers milestone hit"},
+      {t:"Brevo welcome sequence active and running"},
+    ],
+    arjunTasks:["Build Wake Window Calculator (WordPress embed)","Write 12 new posts from calendar","Update 4 more old posts from audit queue","Summer seasonal content planned for July"]
+  },
+  { id:"jul", label:"July", short:"JUL", theme:"Monetisation", color:"#C4956A",
+    targets:{pageviews:"20,000+",email:"500+",revenue:"$150–200",posts:"8 posts",pins:"24 pins"},
+    milestones:[
+      {t:"'Is This Normal?' Sleep Checker tool live"},
+      {t:"Sleep System PDF Bundle live on Gumroad ($9)"},
+      {t:"Ezoic approved and replacing AdSense"},
+      {t:"500 email subscribers milestone hit"},
+      {t:"All top 10 old posts updated"},
+      {t:"Email sequence promoting PDF bundle active"},
+      {t:"Monthly revenue screenshot saved for Flippa file"},
+    ],
+    arjunTasks:["Build 'Is This Normal?' Sleep Checker tool","Create Sleep System PDF Bundle content","Set up Gumroad product page","Write email sequence promoting PDF bundle"]
+  },
+  { id:"aug", label:"August", short:"AUG", theme:"Proof Month 1", color:"#185FA5",
+    targets:{pageviews:"30,000+",email:"800+",revenue:"$300+",posts:"8 posts",pins:"24 pins"},
+    milestones:[
+      {t:"PROOF MONTH — screenshot all revenue sources"},
+      {t:"Back-to-school seasonal content live"},
+      {t:"Ezoic ad placements reviewed and optimised"},
+      {t:"GA4 showing clear 5-month upward trend"},
+      {t:"800 email subscribers milestone hit"},
+      {t:"First Gumroad sale recorded"},
+      {t:"Weekly Flippa evidence file updated"},
+    ],
+    arjunTasks:["Fall/back-to-school content written","Ezoic ad placement optimisation review","Flippa listing draft started"]
+  },
+  { id:"sep", label:"Sept", short:"SEP", theme:"Proof Month 2", color:"#7BA895",
+    targets:{pageviews:"40,000+",email:"1,000+",revenue:"$400–450",posts:"8 posts",pins:"24 pins"},
+    milestones:[
+      {t:"PROOF MONTH — screenshot all revenue sources"},
+      {t:"Holiday content pipeline live"},
+      {t:"Second Pinterest board strategy active"},
+      {t:"1,000 email subscribers milestone hit"},
+      {t:"Flippa listing draft reviewed and refined"},
+      {t:"Gentle Sleep Training Roadmap product built"},
+    ],
+    arjunTasks:["Gentle Sleep Training Roadmap PDF created","Holiday seasonal content for Oct–Dec","Flippa listing description polished"]
+  },
+  { id:"oct", label:"Oct", short:"OCT", theme:"Proof Month 3 + LIST", color:"#5D4E6D",
+    targets:{pageviews:"45–50K",email:"1,200+",revenue:"$500+",posts:"4 only",pins:"12 pins"},
+    milestones:[
+      {t:"PROOF MONTH — $500 revenue target hit",urgent:true},
+      {t:"3 months consecutive revenue screenshots ready"},
+      {t:"GA4 export showing 7-month growth trend"},
+      {t:"Flippa listing published by Nov 1",urgent:true},
+      {t:"Empire Flippers application submitted"},
+      {t:"Email list stats documented (size + open rate)"},
+      {t:"Tools engagement data documented"},
+    ],
+    arjunTasks:["Final Flippa listing copy written","Revenue and traffic summary document created","Site handover documentation prepared"]
+  },
+];
+
+const ARJUN_INSTRUCTIONS = [
+  { priority:"TODAY", color:"#D97757", title:"Amazon product research fix",
+    text:`For every post with Amazon products, provide a table at the bottom: Product Name | Amazon Search Term | ASIN (find via web search) | Price Range | Why it fits. I should never need to search Amazon from scratch.` },
+  { priority:"TODAY", color:"#D97757", title:"Simplified Ideogram prompts",
+    text:`Create /skills/ideogram-prompts.md with: our brand colour palette, three pin styles we use, and for every post batch going forward — both the full detailed prompt AND a short 40–50 word Ideogram-optimised version (subject, mood, lighting, colour palette only — no hex codes, no positioning). This file is permanent and updated with every new batch.` },
+  { priority:"TODAY", color:"#D97757", title:"Workflow files reorganisation",
+    text:`Reorganise our workflow files: (1) ARJUN-TASKS.md = max 10 active tasks, current week only — completed tasks move to /workflow/archive/tasks-log.md, (2) MY-TASKS.md = same rule, (3) Create /workflow/daily/[date]-session.md for each session, (4) Create /workflow/DECISIONS.md for key strategic decisions. At session start, read only ARJUN-TASKS.md + MY-TASKS.md + today's session file. Nothing else unless I ask.` },
+  { priority:"THIS WEEK", color:"#5D4E6D", title:"Brevo email setup",
+    text:`Set up Brevo email from scratch: (1) Step-by-step account setup guide, (2) WordPress opt-in form via Brevo plugin or HTML embed, (3) Create 'Newborn Sleep Schedule Tracker' one-page printable PDF, (4) Connect form to auto-deliver PDF on signup, (5) Place form after first paragraph, end of post, and sidebar. Walk me through each step for a beginner.` },
+  { priority:"THIS WEEK", color:"#5D4E6D", title:"Ezoic WordPress setup",
+    text:`Ezoic onboarding — complete DNS setup, add site verification script to WordPress, configure ad placements, verify ads live` },
+  { priority:"NEXT WEEK", color:"#7BA895", title:"Content audit priority queue",
+    text:`From the 40-post audit, identify the top 10 posts most worth updating first. Rank by: (1) existing GA4 traffic, (2) keyword relevance to Pinterest strategy, (3) effort required. Give me a prioritised list with one paragraph per post explaining what specifically needs to change.` },
+  { priority:"JUNE", color:"#C4956A", title:"Wake Window Calculator tool",
+    text:`Build the Wake Window Calculator as a React component embeddable in WordPress. Inputs: baby age in weeks, last wake time. Outputs: next nap window with colour-coded urgency (green/yellow/red), estimated next feed. Email capture for a free personalised daily schedule PDF. Must work on mobile.` },
+];
+
+// ── helpers ───────────────────────────────────────────────────────────────────
+const fmtK    = v => v >= 1000 ? `${(v/1000).toFixed(1)}K` : String(v||0);
+const fmtKn   = v => v >= 1000 ? `${(v/1000).toFixed(0)}K` : String(v||0);
+const shortDt = iso => { try { return new Date(iso).toLocaleDateString("en-IN",{day:"numeric",month:"short"}); } catch { return ""; }};
+const weekOf  = () => { const n=new Date(),s=new Date(n); s.setDate(n.getDate()-n.getDay()); return `Week of ${s.getDate()} ${s.toLocaleString("en",{month:"short",year:"numeric"})}`; };
+const getWL   = () => { const n=new Date(),s=new Date(n); s.setDate(n.getDate()-n.getDay()); return `${s.getDate()} ${s.toLocaleString("en",{month:"short"})}`; };
+const getMo   = () => new Date().toLocaleString("en",{month:"short",year:"2-digit"});
+
+// ── dual storage ──────────────────────────────────────────────────────────────
+const MILESTONE_KEY = "nms-milestones-v1";
+const PARKED_KEY    = "nms-parked-v1";
+
+async function dsGet(key) {
+  try { const r = await window.storage.get(key); if (r) return JSON.parse(r.value); } catch {}
+  try { const r = localStorage.getItem(key); if (r) return JSON.parse(r); } catch {}
+  return null;
+}
+async function dsSet(key, value) {
+  const str = JSON.stringify(value);
+  try { await window.storage.set(key, str); } catch {}
+  try { localStorage.setItem(key, str); } catch {}
+}
+
+// ── markdown journal builder ──────────────────────────────────────────────────
+
+
+// ── sub-components ────────────────────────────────────────────────────────────
+function Bar({value,max,color,height=4,dim=false}) {
+  const pct=Math.min((value/max)*100,100);
+  return <div style={{background:"rgba(255,255,255,0.06)",borderRadius:100,height,overflow:"hidden"}}><div style={{height:"100%",borderRadius:100,width:`${pct}%`,background:dim?"rgba(255,255,255,0.15)":`linear-gradient(90deg,${color},${color}88)`,transition:"width 0.9s cubic-bezier(0.4,0,0.2,1)",boxShadow:dim?"none":`0 0 8px ${color}50`}}/></div>;
+}
+
+function MetricCard({label,value,goal,color,icon,fmt,onEdit,editKey}) {
+  const pct=Math.min((value/goal)*100,100);
+  return (
+    <div style={{background:`linear-gradient(135deg,${C.midPlum} 0%,${C.darkPlum} 100%)`,borderRadius:16,padding:"18px 16px",border:"1px solid rgba(255,255,255,0.07)",position:"relative",overflow:"hidden"}}>
+      <div style={{position:"absolute",top:0,right:0,width:80,height:80,background:`radial-gradient(circle at 80% 20%,${color}20,transparent 70%)`,pointerEvents:"none"}}/>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+        <div><div style={{fontSize:20,marginBottom:3}}>{icon}</div><div style={{color:"rgba(255,255,255,0.45)",fontSize:10,letterSpacing:"0.08em",textTransform:"uppercase"}}>{label}</div></div>
+        <div style={{textAlign:"right"}}><div style={{color:"white",fontSize:21,fontWeight:"bold",lineHeight:1}}>{fmt?fmt(value):value.toLocaleString()}</div><div style={{color:"rgba(255,255,255,0.28)",fontSize:10,marginTop:2}}>of {fmt?fmt(goal):goal.toLocaleString()}</div></div>
+      </div>
+      <Bar value={value} max={goal} color={color}/>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:7}}>
+        <div style={{color,fontSize:11,fontWeight:"bold"}}>{pct.toFixed(1)}%</div>
+        <button onClick={()=>onEdit(editKey)} style={{background:"rgba(255,255,255,0.07)",border:"none",borderRadius:6,color:"rgba(255,255,255,0.38)",fontSize:10,padding:"3px 8px",cursor:"pointer",fontFamily:"inherit"}}>EDIT</button>
+      </div>
+    </div>
+  );
+}
+
+function FutureCard({label,value,goal,icon,note}) {
+  return (
+    <div style={{background:`linear-gradient(135deg,${C.midPlum}60 0%,${C.darkPlum}60 100%)`,borderRadius:16,padding:16,border:"1px solid rgba(255,255,255,0.03)",opacity:0.42}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+        <div><div style={{fontSize:18,marginBottom:3,filter:"grayscale(1)"}}>{icon}</div><div style={{color:"rgba(255,255,255,0.4)",fontSize:10,letterSpacing:"0.08em",textTransform:"uppercase"}}>{label}</div></div>
+        <div style={{textAlign:"right"}}><div style={{color:"rgba(255,255,255,0.5)",fontSize:18,fontWeight:"bold",lineHeight:1}}>{value.toLocaleString()}</div><div style={{color:"rgba(255,255,255,0.2)",fontSize:10,marginTop:2}}>goal {goal.toLocaleString()}</div></div>
+      </div>
+      <Bar value={value} max={goal} color="white" dim height={3}/>
+      <div style={{color:"rgba(255,255,255,0.22)",fontSize:9,marginTop:6,fontStyle:"italic"}}>{note}</div>
+    </div>
+  );
+}
+
+function Sparkline({points,color,height=52}) {
+  if(!points||points.length<2) return <div style={{height,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:"rgba(255,255,255,0.15)",fontSize:11,fontStyle:"italic"}}>Add entries to see your growth curve</span></div>;
+  const W=280,pad=4,w=W-pad*2,h=height-pad*2,max=Math.max(...points,1);
+  const coords=points.map((v,i)=>[pad+(i/(points.length-1))*w,pad+h-(v/max)*h]);
+  const path=coords.map((c,i)=>`${i===0?"M":"L"}${c[0].toFixed(1)},${c[1].toFixed(1)}`).join(" ");
+  const area=path+` L${coords[coords.length-1][0].toFixed(1)},${(pad+h).toFixed(1)} L${pad},${(pad+h).toFixed(1)} Z`;
+  const gid=`spark${color.replace("#","")}`;
+  return (
+    <svg width="100%" viewBox={`0 0 ${W} ${height}`} style={{overflow:"visible"}}>
+      <defs><linearGradient id={gid} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity="0.25"/><stop offset="100%" stopColor={color} stopOpacity="0.02"/></linearGradient></defs>
+      <path d={area} fill={`url(#${gid})`}/><path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      {coords.map(([x,y],i)=><circle key={i} cx={x} cy={y} r={i===coords.length-1?4:2.5} fill={color} opacity={i===coords.length-1?1:0.5}/>)}
+    </svg>
+  );
+}
+
+function MonthlyBars({entries,metricKey,color}) {
+  if(!entries||entries.length===0) return <div style={{height:60,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:"rgba(255,255,255,0.15)",fontSize:11,fontStyle:"italic"}}>No monthly data yet</span></div>;
+  const vals=entries.map(e=>e[metricKey]||0),max=Math.max(...vals,1);
+  return (
+    <div style={{display:"flex",alignItems:"flex-end",gap:6,height:70,paddingBottom:20}}>
+      {entries.map((e,i)=>{const pct=(e[metricKey]||0)/max,isLast=i===entries.length-1;return(
+        <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+          <div style={{fontSize:8,color:isLast?color:"rgba(255,255,255,0.2)",fontWeight:isLast?"bold":"normal",marginBottom:2}}>{fmtKn(e[metricKey]||0)}</div>
+          <div style={{width:"100%",height:36,background:"rgba(255,255,255,0.06)",borderRadius:4,overflow:"hidden",position:"relative"}}><div style={{position:"absolute",bottom:0,width:"100%",height:`${pct*100}%`,background:isLast?color:`${color}55`,borderRadius:4,transition:"height 0.6s ease"}}/></div>
+          <div style={{fontSize:8,color:"rgba(255,255,255,0.25)",textAlign:"center",lineHeight:1.2}}>{e.label}</div>
+        </div>
+      );})}
+    </div>
+  );
+}
+
+// ── PINTEREST TAB ─────────────────────────────────────────────────────────────
+function PinterestTab({data,growth,onEdit,onAddWeekly,onAddMonthly}) {
+  const {pinterestImpressions:imp,pinterestOutboundClicks:clicks,pinterestSaves:saves,pageviews}=data;
+  const ctrNum=imp>0?(clicks/imp)*100:0,ctr=imp>0?ctrNum.toFixed(2):"—";
+  const ctrS=ctrNum===0?null:ctrNum<0.3?{label:"Cold — keep pinning",color:"#8A9AAA"}:ctrNum<0.8?{label:"Warming up ↑",color:C.terracotta}:{label:"Strong 🔥",color:C.jade};
+  const stats=[{key:"pinterestImpressions",label:"Impressions",value:imp,goal:GOALS.pinterestImpressions,color:C.pink,icon:"👁"},{key:"pinterestOutboundClicks",label:"Outbound Clicks",value:clicks,goal:GOALS.pinterestOutboundClicks,color:C.terracotta,icon:"🔗"},{key:"pinterestSaves",label:"Saves",value:saves,goal:GOALS.pinterestSaves,color:C.jade,icon:"🔖"}];
+  const [activeM,setActiveM]=useState("impressions");
+  const [showW,setShowW]=useState(false);
+  const [showMo,setShowMo]=useState(false);
+  const [wF,setWF]=useState({impressions:"",clicks:"",saves:""});
+  const [mF,setMF]=useState({impressions:"",clicks:"",saves:""});
+  const metrics=[{key:"impressions",label:"Impressions",color:C.pink},{key:"clicks",label:"Clicks",color:C.terracotta},{key:"saves",label:"Saves",color:C.jade}];
+  const ac=metrics.find(m=>m.key===activeM);
+  const wPts=(growth.weekly||[]).map(e=>e[activeM]||0);
+  const wLbls=(growth.weekly||[]).map(e=>e.label);
+  const lw=growth.weekly?.[growth.weekly.length-1],pw=growth.weekly?.[growth.weekly.length-2];
+  const delta=lw&&pw?lw[activeM]-pw[activeM]:null;
+  const inp=col=>({width:"100%",background:"rgba(255,255,255,0.06)",border:`1px solid ${col}30`,borderRadius:8,color:"white",padding:"8px",fontSize:14,fontFamily:"Georgia, serif",outline:"none",boxSizing:"border-box",textAlign:"center"});
+  const addW=()=>{onAddWeekly({label:getWL(),impressions:parseInt(wF.impressions.replace(/,/g,""))||0,clicks:parseInt(wF.clicks.replace(/,/g,""))||0,saves:parseInt(wF.saves.replace(/,/g,""))||0,date:new Date().toISOString()});setWF({impressions:"",clicks:"",saves:""});setShowW(false);};
+  const addMo=()=>{onAddMonthly({label:getMo(),impressions:parseInt(mF.impressions.replace(/,/g,""))||0,clicks:parseInt(mF.clicks.replace(/,/g,""))||0,saves:parseInt(mF.saves.replace(/,/g,""))||0,date:new Date().toISOString()});setMF({impressions:"",clicks:"",saves:""});setShowMo(false);};
+
+  return (
+    <div>
+      <div style={{background:`linear-gradient(135deg,${C.midPlum},${C.darkPlum})`,borderRadius:20,padding:20,marginBottom:16,border:`1px solid rgba(232,132,122,0.22)`,position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",top:0,right:0,width:140,height:140,background:`radial-gradient(circle at 90% 10%,${C.pink}10,transparent 65%)`,pointerEvents:"none"}}/>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+          <div style={{display:"flex",alignItems:"center",gap:9}}>
+            <div style={{width:30,height:30,borderRadius:"50%",background:`linear-gradient(135deg,${C.pink},${C.terracotta})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15}}>📌</div>
+            <div><div style={{color:C.cream,fontFamily:"Georgia, serif",fontSize:15,fontWeight:"bold",lineHeight:1}}>Pinterest Signal</div><div style={{color:"rgba(255,255,255,0.28)",fontSize:9,letterSpacing:"0.08em",marginTop:2}}>CURRENT SNAPSHOT</div></div>
+          </div>
+          {ctrS&&<div style={{background:`${ctrS.color}18`,border:`1px solid ${ctrS.color}35`,borderRadius:100,padding:"3px 10px",fontSize:10,color:ctrS.color}}>{ctrS.label}</div>}
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"auto 1fr",gap:12,marginBottom:12}}>
+          <div style={{background:"rgba(255,255,255,0.04)",borderRadius:14,padding:"14px 16px",border:"1px solid rgba(255,255,255,0.05)",textAlign:"center",minWidth:86}}>
+            <div style={{color:"rgba(255,255,255,0.32)",fontSize:9,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:4}}>CTR</div>
+            <div style={{color:C.cream,fontSize:28,fontFamily:"Georgia, serif",fontWeight:"bold",lineHeight:1}}>{ctr}{ctr!=="—"?"%":""}</div>
+            <div style={{marginTop:8}}>{[["<0.3%","#8A9AAA"],["0.3–0.8%",C.terracotta],[">0.8%",C.jade]].map(([r,col])=><div key={r} style={{display:"flex",alignItems:"center",gap:4,marginBottom:2}}><div style={{width:5,height:5,borderRadius:"50%",background:col,flexShrink:0}}/><div style={{color:"rgba(255,255,255,0.25)",fontSize:9}}>{r}</div></div>)}</div>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {stats.map(s=>(
+              <div key={s.key} style={{background:"rgba(255,255,255,0.03)",borderRadius:10,padding:"10px 12px"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
+                  <div style={{display:"flex",alignItems:"center",gap:5}}><span style={{fontSize:11}}>{s.icon}</span><span style={{color:"rgba(255,255,255,0.35)",fontSize:9,letterSpacing:"0.06em",textTransform:"uppercase"}}>{s.label}</span></div>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{color:C.cream,fontSize:15,fontWeight:"bold"}}>{fmtK(s.value)}</span><button onClick={()=>onEdit(s.key)} style={{background:"none",border:"none",color:"rgba(255,255,255,0.25)",fontSize:9,cursor:"pointer",padding:0,fontFamily:"inherit"}}>EDIT</button></div>
+                </div>
+                <Bar value={s.value} max={s.goal} color={s.color} height={3}/>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{background:"rgba(255,255,255,0.03)",borderRadius:10,padding:"10px 14px",border:"1px solid rgba(255,255,255,0.04)"}}>
+          <div style={{color:"rgba(255,255,255,0.22)",fontSize:9,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:7}}>Flow → site traffic</div>
+          <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+            {[{label:"Impressions",value:fmtK(imp),color:C.pink},"→",{label:"Saves",value:fmtK(saves),color:C.jade},"→",{label:"Clicks",value:fmtK(clicks),color:C.terracotta},"→",{label:"Pageviews",value:pageviews>=1000?`${(pageviews/1000).toFixed(1)}K`:String(pageviews||0),color:C.lightJade}].map((item,i)=>item==="→"?<div key={i} style={{color:"rgba(255,255,255,0.15)",fontSize:13}}>→</div>:<div key={i} style={{textAlign:"center"}}><div style={{color:item.color,fontSize:14,fontWeight:"bold"}}>{item.value}</div><div style={{color:"rgba(255,255,255,0.2)",fontSize:9}}>{item.label}</div></div>)}
+          </div>
+        </div>
+      </div>
+      <div style={{background:`linear-gradient(135deg,${C.midPlum},${C.darkPlum})`,borderRadius:20,padding:20,marginBottom:16,border:`1px solid rgba(232,132,122,0.15)`}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+          <div><div style={{color:C.cream,fontFamily:"Georgia, serif",fontSize:15,fontWeight:"bold"}}>📈 Growth Map</div><div style={{color:"rgba(255,255,255,0.28)",fontSize:9,letterSpacing:"0.08em",marginTop:2}}>WEEKLY CURVE + MONTHLY BARS</div></div>
+          {delta!==null&&<div style={{textAlign:"right"}}><div style={{color:delta>=0?C.jade:C.pink,fontSize:13,fontWeight:"bold"}}>{delta>=0?"+":""}{fmtK(delta)}</div><div style={{color:"rgba(255,255,255,0.25)",fontSize:9}}>vs last week</div></div>}
+        </div>
+        <div style={{display:"flex",gap:6,marginBottom:14}}>
+          {metrics.map(m=><button key={m.key} onClick={()=>setActiveM(m.key)} style={{flex:1,padding:"6px 0",borderRadius:8,border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:10,background:activeM===m.key?m.color:"rgba(255,255,255,0.05)",color:activeM===m.key?"white":"rgba(255,255,255,0.35)",fontWeight:activeM===m.key?"bold":"normal",transition:"all 0.2s"}}>{m.label}</button>)}
+        </div>
+        <div style={{background:"rgba(0,0,0,0.15)",borderRadius:12,padding:"14px 14px 10px",marginBottom:10}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+            <div><div style={{color:"rgba(255,255,255,0.45)",fontSize:9,letterSpacing:"0.08em",textTransform:"uppercase"}}>Weekly Trend</div>{wLbls.length>0&&<div style={{color:"rgba(255,255,255,0.2)",fontSize:9,marginTop:2}}>{wLbls[0]} → {wLbls[wLbls.length-1]}</div>}</div>
+            <button onClick={()=>{setShowW(!showW);setShowMo(false);}} style={{background:showW?ac.color:"rgba(255,255,255,0.07)",border:"none",borderRadius:8,color:showW?"white":"rgba(255,255,255,0.4)",fontSize:10,padding:"5px 10px",cursor:"pointer",fontFamily:"inherit"}}>+ Log Week</button>
+          </div>
+          <Sparkline points={wPts} color={ac.color} height={52}/>
+        </div>
+        {showW&&<div style={{background:"rgba(0,0,0,0.2)",borderRadius:12,padding:14,marginBottom:10,border:`1px solid ${ac.color}25`}}>
+          <div style={{color:"rgba(255,255,255,0.5)",fontSize:10,letterSpacing:"0.06em",marginBottom:10}}>LOG THIS WEEK · <span style={{color:ac.color}}>{getWL()}</span></div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:10}}>
+            {[{key:"impressions",label:"Impressions",color:C.pink},{key:"clicks",label:"Clicks",color:C.terracotta},{key:"saves",label:"Saves",color:C.jade}].map(f=>(
+              <div key={f.key}><div style={{color:f.color,fontSize:9,letterSpacing:"0.06em",marginBottom:4}}>{f.label}</div><input type="text" inputMode="numeric" value={wF[f.key]} onChange={e=>setWF(p=>({...p,[f.key]:e.target.value.replace(/[^0-9,]/g,"")}))} placeholder="0" style={inp(f.color)}/></div>
+            ))}
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={()=>setShowW(false)} style={{flex:1,padding:"8px",background:"rgba(255,255,255,0.04)",border:"none",borderRadius:8,color:"rgba(255,255,255,0.3)",cursor:"pointer",fontFamily:"inherit",fontSize:11}}>Cancel</button>
+            <button onClick={addW} style={{flex:2,padding:"8px",background:ac.color,border:"none",borderRadius:8,color:"white",fontWeight:"bold",cursor:"pointer",fontFamily:"Georgia, serif",fontSize:12}}>Save Week</button>
+          </div>
+        </div>}
+        <div style={{background:"rgba(0,0,0,0.15)",borderRadius:12,padding:"14px 14px 4px"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+            <div style={{color:"rgba(255,255,255,0.45)",fontSize:9,letterSpacing:"0.08em",textTransform:"uppercase"}}>Monthly Summary</div>
+            <button onClick={()=>{setShowMo(!showMo);setShowW(false);}} style={{background:showMo?ac.color:"rgba(255,255,255,0.07)",border:"none",borderRadius:8,color:showMo?"white":"rgba(255,255,255,0.4)",fontSize:10,padding:"5px 10px",cursor:"pointer",fontFamily:"inherit"}}>+ Log Month</button>
+          </div>
+          <MonthlyBars entries={growth.monthly||[]} metricKey={activeM} color={ac.color}/>
+        </div>
+        {showMo&&<div style={{background:"rgba(0,0,0,0.2)",borderRadius:12,padding:14,marginTop:10,border:`1px solid ${ac.color}25`}}>
+          <div style={{color:"rgba(255,255,255,0.5)",fontSize:10,letterSpacing:"0.06em",marginBottom:10}}>LOG THIS MONTH · <span style={{color:ac.color}}>{getMo()}</span></div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:10}}>
+            {[{key:"impressions",label:"Impressions",color:C.pink},{key:"clicks",label:"Clicks",color:C.terracotta},{key:"saves",label:"Saves",color:C.jade}].map(f=>(
+              <div key={f.key}><div style={{color:f.color,fontSize:9,letterSpacing:"0.06em",marginBottom:4}}>{f.label}</div><input type="text" inputMode="numeric" value={mF[f.key]} onChange={e=>setMF(p=>({...p,[f.key]:e.target.value.replace(/[^0-9,]/g,"")}))} placeholder="0" style={inp(f.color)}/></div>
+            ))}
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={()=>setShowMo(false)} style={{flex:1,padding:"8px",background:"rgba(255,255,255,0.04)",border:"none",borderRadius:8,color:"rgba(255,255,255,0.3)",cursor:"pointer",fontFamily:"inherit",fontSize:11}}>Cancel</button>
+            <button onClick={addMo} style={{flex:2,padding:"8px",background:ac.color,border:"none",borderRadius:8,color:"white",fontWeight:"bold",cursor:"pointer",fontFamily:"Georgia, serif",fontSize:12}}>Save Month</button>
+          </div>
+        </div>}
+      </div>
+    </div>
+  );
+}
+
+// ── METRICS TAB ───────────────────────────────────────────────────────────────
+function MetricsTab({data,onEdit}) {
+  const rev=data.revenue,valLow=rev*30,valHigh=rev*40,valMid=(valLow+valHigh)/2;
+  const debtPct=Math.min((valMid/FLIPPA_TARGET)*100,100);
+  const fmtUsd=v=>v>=1000?`$${(v/1000).toFixed(1)}K`:`$${v}`;
+  const fmtInr=v=>v>=100000?`₹${(v/100000).toFixed(1)}L`:`₹${Math.round(v).toLocaleString("en-IN")}`;
+  const activeMetrics=[
+    {key:"pageviews",label:"Pageviews/mo",icon:"📈",color:C.jade},
+    {key:"postsPublished",label:"Posts Published",icon:"✍️",color:C.persimmon},
+    {key:"pinsLive",label:"Pins Live",icon:"📌",color:C.pink},
+    {key:"revenue",label:"Revenue/mo",icon:"💰",color:C.terracotta,fmt:v=>`$${v}`},
+  ];
+  const milestones=[
+    {label:"First pin published",done:data.pinsLive>=1},
+    {label:"10,000 Pinterest impressions",done:data.pinterestImpressions>=10000},
+    {label:"100 Pinterest outbound clicks",done:data.pinterestOutboundClicks>=100},
+    {label:"10 posts published",done:data.postsPublished>=10},
+    {label:"100,000 Pinterest impressions",done:data.pinterestImpressions>=100000},
+    {label:"10,000 pageviews/month",done:data.pageviews>=10000},
+    {label:"Activate Ezoic ads",done:data.pageviews>=10000},
+    {label:"First $1 earned",done:data.revenue>0},
+    {label:"$100/month revenue",done:data.revenue>=100},
+    {label:"First lead magnet live",done:false},
+    {label:"100 email subscribers",done:data.emailSubs>=100},
+    {label:"500,000 Pinterest impressions",done:data.pinterestImpressions>=500000},
+    {label:"50,000 pageviews/month",done:data.pageviews>=50000},
+    {label:"$500/month — site monetized ✓",done:data.revenue>=500},
+    {label:"List on Flippa / Empire Flippers",done:data.revenue>=500},
+    {label:"Sell for $20,000+",done:false},
+    {label:"Clear ₹15 lakh debt 🎉",done:false},
+  ];
+  return (
+    <div>
+      <div style={{marginBottom:6}}>
+        <div style={{color:"rgba(255,255,255,0.28)",fontSize:9,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>What's moving now</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          {activeMetrics.map(m=><MetricCard key={m.key} label={m.label} value={data[m.key]} goal={GOALS[m.key]} color={m.color} icon={m.icon} fmt={m.fmt} onEdit={onEdit} editKey={m.key}/>)}
+        </div>
+      </div>
+      <div style={{marginBottom:20,marginTop:14}}>
+        <div style={{color:"rgba(255,255,255,0.18)",fontSize:9,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>Coming later</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <FutureCard label="Email Subscribers" value={data.emailSubs} goal={GOALS.emailSubs} icon="📬" note="Unlocks when lead magnets are live"/>
+          <FutureCard label="Tools Built" value={data.toolsBuilt} goal={GOALS.toolsBuilt} icon="🔧" note="Phase 3 — after traffic milestone"/>
+        </div>
+      </div>
+      {/* Analytics At A Glance */}
+      <div style={{background:`linear-gradient(135deg,${C.midPlum},${C.darkPlum})`,borderRadius:16,padding:18,marginBottom:16,border:"1px solid rgba(255,255,255,0.07)"}}>
+        <div style={{color:"rgba(255,255,255,0.38)",fontSize:10,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:12}}>This Week's Numbers 📈</div>
+
+        {/* GA4 */}
+        <div style={{marginBottom:14}}>
+          <div style={{color:C.jade,fontSize:11,fontWeight:"bold",marginBottom:6}}>GA4 (Google Analytics)</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            <div style={{background:"rgba(255,255,255,0.03)",borderRadius:10,padding:"10px 12px"}}>
+              <div style={{color:"rgba(255,255,255,0.35)",fontSize:9}}>Sessions (this week)</div>
+              <div style={{color:C.cream,fontSize:16,fontWeight:"bold"}}>{data.analytics.ga4Sessions.toLocaleString()}</div>
+            </div>
+            <div style={{background:"rgba(255,255,255,0.03)",borderRadius:10,padding:"10px 12px"}}>
+              <div style={{color:"rgba(255,255,255,0.35)",fontSize:9}}>Top post</div>
+              <div style={{color:C.cream,fontSize:13,fontWeight:"bold",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{data.analytics.ga4TopPost || "—"}</div>
+              <div style={{color:C.jade,fontSize:11}}>{data.analytics.ga4TopPostViews.toLocaleString()} views</div>
+            </div>
+          </div>
+          {data.analytics.ga4WeekOnWeekChange !== 0 && (
+            <div style={{color:data.analytics.ga4WeekOnWeekChange > 0 ? C.jade : C.pink,fontSize:10,marginTop:6}}>
+              {data.analytics.ga4WeekOnWeekChange > 0 ? "↑" : "↓"} {Math.abs(data.analytics.ga4WeekOnWeekChange)}% vs last week
+            </div>
+          )}
+        </div>
+
+        {/* Google Search Console */}
+        <div style={{marginBottom:14}}>
+          <div style={{color:C.terracotta,fontSize:11,fontWeight:"bold",marginBottom:6}}>Google Search Console</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            <div style={{background:"rgba(255,255,255,0.03)",borderRadius:10,padding:"10px 12px"}}>
+              <div style={{color:"rgba(255,255,255,0.35)",fontSize:9}}>Avg position</div>
+              <div style={{color:C.cream,fontSize:16,fontWeight:"bold"}}>{data.analytics.gscAvgPosition || "—"}</div>
+            </div>
+            <div style={{background:"rgba(255,255,255,0.03)",borderRadius:10,padding:"10px 12px"}}>
+              <div style={{color:"rgba(255,255,255,0.35)",fontSize:9}}>Total clicks</div>
+              <div style={{color:C.cream,fontSize:16,fontWeight:"bold"}}>{data.analytics.gscClicks.toLocaleString()}</div>
+            </div>
+          </div>
+          <div style={{marginTop:8}}>
+            <div style={{color:"rgba(255,255,255,0.35)",fontSize:9}}>Top query</div>
+            <div style={{color:C.cream,fontSize:12,fontWeight:"bold"}}>{data.analytics.gscTopQuery || "—"}</div>
+          </div>
+        </div>
+
+        {/* Pinterest summary */}
+        <div>
+          <div style={{color:C.pink,fontSize:11,fontWeight:"bold",marginBottom:6}}>Pinterest summary</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+            <div style={{background:"rgba(255,255,255,0.03)",borderRadius:10,padding:"10px 12px"}}>
+              <div style={{color:"rgba(255,255,255,0.35)",fontSize:9}}>Impressions</div>
+              <div style={{color:C.cream,fontSize:16,fontWeight:"bold"}}>{data.pinterestImpressions.toLocaleString()}</div>
+            </div>
+            <div style={{background:"rgba(255,255,255,0.03)",borderRadius:10,padding:"10px 12px"}}>
+              <div style={{color:"rgba(255,255,255,0.35)",fontSize:9}}>Outbound clicks</div>
+              <div style={{color:C.cream,fontSize:16,fontWeight:"bold"}}>{data.pinterestOutboundClicks.toLocaleString()}</div>
+            </div>
+            <div style={{background:"rgba(255,255,255,0.03)",borderRadius:10,padding:"10px 12px"}}>
+              <div style={{color:"rgba(255,255,255,0.35)",fontSize:9}}>CTR</div>
+              <div style={{color:C.cream,fontSize:16,fontWeight:"bold"}}>{data.pinterestImpressions > 0 ? ((data.pinterestOutboundClicks / data.pinterestImpressions) * 100).toFixed(2) + "%" : "—"}</div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{borderTop:"1px solid rgba(255,255,255,0.05)",marginTop:14,paddingTop:10}}>
+          <div style={{color:"rgba(255,255,255,0.25)",fontSize:9}}>Last updated: {data.analytics.lastUpdated || "—"}</div>
+          <div style={{color:"rgba(255,255,255,0.15)",fontSize:8}}>Updated by ARJUN from owner screenshots</div>
+        </div>
+      </div>
+
+      <div style={{background:`linear-gradient(135deg,${C.plum}80,${C.darkPlum})`,border:`1px solid ${C.terracotta}22`,borderRadius:20,padding:22,marginBottom:16,textAlign:"center",position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",inset:0,background:`radial-gradient(ellipse at 50% 0%,${C.terracotta}10,transparent 70%)`,pointerEvents:"none"}}/>
+        <div style={{color:"rgba(255,255,255,0.35)",fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>Estimated Flippa Valuation</div>
+        <div style={{fontSize:rev>0?40:28,fontWeight:"bold",background:`linear-gradient(135deg,${C.terracotta},${C.persimmon})`,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:1,marginBottom:4}}>{rev>0?`${fmtUsd(valLow)}–${fmtUsd(valHigh)}`:"—"}</div>
+        {rev>0?<div style={{color:"rgba(255,255,255,0.3)",fontSize:12,marginBottom:16}}>({fmtInr(valLow*USD_TO_INR)}–{fmtInr(valHigh*USD_TO_INR)}) · 30–40× monthly revenue of ${rev}</div>:<div style={{color:"rgba(255,255,255,0.2)",fontSize:12,marginBottom:16}}>Updates once monthly revenue is non-zero</div>}
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+          <span style={{color:"rgba(255,255,255,0.35)",fontSize:10,letterSpacing:"0.06em"}}>DEBT FREEDOM PROGRESS</span>
+          <span style={{color:C.jade,fontSize:10,fontWeight:"bold"}}>{debtPct.toFixed(1)}%</span>
+        </div>
+        <div style={{background:"rgba(255,255,255,0.06)",borderRadius:100,height:6,overflow:"hidden"}}>
+          <div style={{height:"100%",borderRadius:100,width:`${debtPct}%`,background:`linear-gradient(90deg,${C.jade},${C.lightJade})`,transition:"width 1s ease",boxShadow:`0 0 10px ${C.jade}60`}}/>
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",marginTop:5}}>
+          <span style={{color:"rgba(255,255,255,0.16)",fontSize:10}}>₹0</span>
+          <span style={{color:"rgba(255,255,255,0.16)",fontSize:10}}>$20K = ₹{(FLIPPA_TARGET*USD_TO_INR/100000).toFixed(1)}L target</span>
+        </div>
+      </div>
+      <div style={{background:`linear-gradient(135deg,${C.midPlum},${C.darkPlum})`,borderRadius:16,padding:18,border:"1px solid rgba(255,255,255,0.05)"}}>
+        <div style={{color:"rgba(255,255,255,0.38)",fontSize:10,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:14}}>🗺️ The Journey</div>
+        {milestones.map((m,i)=>(
+          <div key={i} style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,opacity:m.done?1:0.35}}>
+            <div style={{width:16,height:16,borderRadius:"50%",flexShrink:0,background:m.done?`linear-gradient(135deg,${C.jade},${C.lightJade})`:"rgba(255,255,255,0.06)",border:m.done?"none":"1px solid rgba(255,255,255,0.09)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:m.done?`0 0 8px ${C.jade}50`:"none"}}>
+              {m.done&&<span style={{fontSize:8,color:"white"}}>✓</span>}
+            </div>
+            <div style={{fontSize:13,color:m.done?C.cream:"rgba(255,255,255,0.4)"}}>{m.label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── JOURNAL TAB ───────────────────────────────────────────────────────────────
+function JournalTab({data,growth,onSaveFocus,onCloseWeek,onAddWin}) {
+  const [mode,setMode]=useState(null);
+  const [focusText,setFocusText]=useState(data.currentWeekFocus||"");
+  const [reflectText,setReflectText]=useState("");
+  const [expanded,setExpanded]=useState(null);
+  const [winText,setWinText]=useState("");
+  const [showWinForm,setShowWinForm]=useState(false);
+  const [shareStatus,setShareStatus]=useState({});
+  const handleSaveFocus=()=>{onSaveFocus(focusText.trim());setMode(null);};
+  const handleCloseWeek=()=>{
+    if(!reflectText.trim())return;
+    const weekAgo=Date.now()-7*24*60*60*1000;
+    const weekWins=(data.wins||[]).filter(w=>new Date(w.date).getTime()>weekAgo);
+    const latestGrowth=growth?.weekly?.[growth.weekly.length-1];
+    const snapshot={pageviews:data.pageviews,postsPublished:data.postsPublished,pinsLive:data.pinsLive,revenue:data.revenue,emailSubs:data.emailSubs};
+    onCloseWeek(reflectText.trim(),weekWins,snapshot,latestGrowth);
+    setReflectText("");setMode(null);
+  };
+  const handleAddWin=()=>{if(!winText.trim())return;onAddWin({text:winText.trim(),date:new Date().toISOString()});setWinText("");setShowWinForm(false);};
+    const wins=data.wins||[];
+  const journal=data.journal||[];
+  return (
+    <div>
+      <div style={{background:`linear-gradient(135deg,rgba(93,78,109,0.65),rgba(61,46,74,0.85))`,borderRadius:14,padding:"14px 18px",marginBottom:16,border:`1px solid rgba(217,119,87,0.22)`}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:data.currentWeekFocus?8:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:7}}>
+            <span style={{fontSize:14}}>🎯</span>
+            <div>
+              <div style={{color:"rgba(255,255,255,0.4)",fontSize:10,letterSpacing:"0.08em",textTransform:"uppercase"}}>This Week's Focus</div>
+              {data.currentWeekLabel&&<div style={{color:"rgba(255,255,255,0.22)",fontSize:9,marginTop:1}}>{data.currentWeekLabel}</div>}
+            </div>
+          </div>
+          <div style={{display:"flex",gap:6}}>
+            <button onClick={()=>{setFocusText(data.currentWeekFocus||"");setMode(mode==="focus"?null:"focus");}} style={{background:mode==="focus"?C.terracotta:"rgba(255,255,255,0.07)",border:"none",borderRadius:7,color:mode==="focus"?"white":"rgba(255,255,255,0.4)",fontSize:10,padding:"4px 9px",cursor:"pointer",fontFamily:"inherit"}}>{data.currentWeekFocus?"Edit":"Set Focus"}</button>
+            {data.currentWeekFocus&&<button onClick={()=>setMode(mode==="reflect"?null:"reflect")} style={{background:mode==="reflect"?C.jade:"rgba(255,255,255,0.07)",border:"none",borderRadius:7,color:mode==="reflect"?"white":"rgba(255,255,255,0.4)",fontSize:10,padding:"4px 9px",cursor:"pointer",fontFamily:"inherit"}}>Reflect</button>}
+          </div>
+        </div>
+        {data.currentWeekFocus?<div style={{color:C.cream,fontSize:14,lineHeight:1.6}}>{data.currentWeekFocus}</div>:<div style={{color:"rgba(255,255,255,0.2)",fontSize:13,fontStyle:"italic"}}>What are you shipping this week? Tap Set Focus.</div>}
+      </div>
+      {mode==="focus"&&(
+        <div style={{background:"rgba(0,0,0,0.2)",borderRadius:12,padding:14,marginBottom:14,border:`1px solid ${C.terracotta}25`}}>
+          <div style={{color:"rgba(255,255,255,0.45)",fontSize:10,letterSpacing:"0.06em",marginBottom:8}}>WHAT ARE YOU FOCUSING ON THIS WEEK?</div>
+          <textarea value={focusText} onChange={e=>setFocusText(e.target.value)} rows={3} autoFocus placeholder="e.g. Publish 3 posts on baby sleep + create 8 Pinterest pins for Mother's Day" style={{width:"100%",background:"rgba(255,255,255,0.06)",border:`1px solid ${C.terracotta}35`,borderRadius:10,color:"white",padding:"10px 12px",fontSize:13,fontFamily:"inherit",resize:"none",outline:"none",boxSizing:"border-box",lineHeight:1.6,marginBottom:10}}/>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={()=>setMode(null)} style={{flex:1,padding:"8px",background:"rgba(255,255,255,0.04)",border:"none",borderRadius:9,color:"rgba(255,255,255,0.3)",cursor:"pointer",fontFamily:"inherit",fontSize:11}}>Cancel</button>
+            <button onClick={handleSaveFocus} style={{flex:2,padding:"8px",background:C.terracotta,border:"none",borderRadius:9,color:"white",fontWeight:"bold",cursor:"pointer",fontFamily:"Georgia, serif",fontSize:12}}>Save Focus</button>
+          </div>
+        </div>
+      )}
+      {mode==="reflect"&&(
+        <div style={{background:"rgba(0,0,0,0.2)",borderRadius:12,padding:14,marginBottom:14,border:`1px solid ${C.jade}25`}}>
+          <div style={{background:"rgba(255,255,255,0.04)",borderRadius:9,padding:"10px 12px",marginBottom:10,border:`1px solid ${C.terracotta}18`}}>
+            <div style={{color:C.terracotta,fontSize:9,letterSpacing:"0.06em",marginBottom:4}}>YOUR FOCUS WAS</div>
+            <div style={{color:"rgba(255,255,255,0.7)",fontSize:13,lineHeight:1.5,fontStyle:"italic"}}>"{data.currentWeekFocus}"</div>
+          </div>
+          <div style={{color:"rgba(255,255,255,0.45)",fontSize:10,letterSpacing:"0.06em",marginBottom:8}}>HOW DID THE WEEK GO?</div>
+          <textarea value={reflectText} onChange={e=>setReflectText(e.target.value)} rows={4} autoFocus placeholder="What got done, what didn't, what ARJUN helped with, what to carry into next week..." style={{width:"100%",background:"rgba(255,255,255,0.06)",border:`1px solid ${C.jade}35`,borderRadius:10,color:"white",padding:"10px 12px",fontSize:13,fontFamily:"inherit",resize:"none",outline:"none",boxSizing:"border-box",lineHeight:1.6,marginBottom:10}}/>
+          <div style={{background:"rgba(123,168,149,0.08)",borderRadius:8,padding:"8px 12px",marginBottom:10,border:`1px solid ${C.jade}15`}}>
+            <div style={{color:C.jade,fontSize:9,letterSpacing:"0.06em",marginBottom:3}}>SAVED WITH THIS ENTRY</div>
+            <div style={{color:"rgba(255,255,255,0.4)",fontSize:10,lineHeight:1.7}}>✦ Focus & reflection · ✦ Pinterest numbers · ✦ Wins this week · ✦ Dashboard snapshot</div>
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={()=>setMode(null)} style={{flex:1,padding:"8px",background:"rgba(255,255,255,0.04)",border:"none",borderRadius:9,color:"rgba(255,255,255,0.3)",cursor:"pointer",fontFamily:"inherit",fontSize:11}}>Cancel</button>
+            <button onClick={handleCloseWeek} disabled={!reflectText.trim()} style={{flex:2,padding:"8px",background:reflectText.trim()?C.jade:"rgba(255,255,255,0.1)",border:"none",borderRadius:9,color:"white",fontWeight:"bold",cursor:reflectText.trim()?"pointer":"default",fontFamily:"Georgia, serif",fontSize:12}}>Close Week & Save</button>
+          </div>
+        </div>
+      )}
+      <div style={{background:`linear-gradient(135deg,${C.midPlum},${C.darkPlum})`,borderRadius:16,padding:18,marginBottom:16,border:"1px solid rgba(255,255,255,0.05)"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:wins.length>0||showWinForm?12:0}}>
+          <div style={{color:"rgba(255,255,255,0.38)",fontSize:10,letterSpacing:"0.08em",textTransform:"uppercase"}}>🏅 Win Log</div>
+          <button onClick={()=>setShowWinForm(!showWinForm)} style={{background:showWinForm?C.terracotta:"rgba(255,255,255,0.07)",border:"none",borderRadius:6,color:showWinForm?"white":"rgba(255,255,255,0.38)",fontSize:10,padding:"3px 10px",cursor:"pointer",fontFamily:"inherit",transition:"all 0.2s"}}>{showWinForm?"Cancel":"+ Add Win"}</button>
+        </div>
+        {showWinForm&&<div style={{marginBottom:12}}><textarea value={winText} onChange={e=>setWinText(e.target.value)} rows={2} autoFocus placeholder="What did you accomplish today?" style={{width:"100%",background:"rgba(255,255,255,0.06)",border:`1px solid ${C.terracotta}40`,borderRadius:10,color:"white",padding:"10px 12px",fontSize:13,fontFamily:"inherit",resize:"none",outline:"none",boxSizing:"border-box",lineHeight:1.5}}/><button onClick={handleAddWin} style={{marginTop:8,width:"100%",padding:"9px",background:C.terracotta,border:"none",borderRadius:10,color:"white",fontWeight:"bold",cursor:"pointer",fontFamily:"Georgia, serif",fontSize:13}}>Save Win</button></div>}
+        {wins.length===0&&!showWinForm&&<div style={{color:"rgba(255,255,255,0.16)",fontSize:13,fontStyle:"italic"}}>No wins logged yet.</div>}
+        {wins.length>0&&<div style={{display:"flex",flexDirection:"column",gap:8}}>{[...wins].reverse().slice(0,5).map((w,i)=>(
+          <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",opacity:i===0?1:1-(i*0.15)}}>
+            <div style={{width:6,height:6,borderRadius:"50%",background:i===0?C.terracotta:"rgba(255,255,255,0.2)",flexShrink:0,marginTop:5}}/>
+            <div style={{flex:1}}><div style={{color:i===0?C.cream:"rgba(255,255,255,0.55)",fontSize:13,lineHeight:1.5}}>{w.text}</div><div style={{color:"rgba(255,255,255,0.22)",fontSize:10,marginTop:2}}>{shortDt(w.date)}</div></div>
+          </div>
+        ))}{wins.length>5&&<div style={{color:"rgba(255,255,255,0.2)",fontSize:10,textAlign:"center",marginTop:2}}>+ {wins.length-5} earlier wins</div>}</div>}
+      </div>
+      {journal.length>0&&(
+        <div>
+          <div style={{color:"rgba(255,255,255,0.25)",fontSize:9,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:10}}>Past Entries</div>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {[...journal].reverse().map((entry,i)=>{
+              const isOpen=expanded===i;
+              const st=shareStatus[i];
+              return (
+                <div key={i} style={{background:"rgba(255,255,255,0.03)",borderRadius:12,overflow:"hidden",border:"1px solid rgba(255,255,255,0.05)"}}>
+                  <button onClick={()=>setExpanded(isOpen?null:i)} style={{width:"100%",padding:"12px 14px",background:"none",border:"none",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",fontFamily:"inherit"}}>
+                    <div style={{textAlign:"left"}}>
+                      <div style={{color:C.cream,fontSize:12,fontWeight:"bold"}}>{entry.weekLabel}</div>
+                      <div style={{color:"rgba(255,255,255,0.3)",fontSize:10,marginTop:2,maxWidth:240,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{entry.focus}</div>
+                    </div>
+                    <div style={{color:"rgba(255,255,255,0.25)",fontSize:12}}>{isOpen?"▲":"▼"}</div>
+                  </button>
+                  {isOpen&&(
+                    <div style={{padding:"0 14px 14px"}}>
+                      <div style={{background:`rgba(217,119,87,0.08)`,borderRadius:9,padding:"10px 12px",marginBottom:8,border:`1px solid ${C.terracotta}15`}}>
+                        <div style={{color:C.terracotta,fontSize:9,letterSpacing:"0.06em",marginBottom:4}}>🎯 FOCUS</div>
+                        <div style={{color:"rgba(255,255,255,0.75)",fontSize:12,lineHeight:1.6}}>{entry.focus}</div>
+                      </div>
+                      <div style={{background:"rgba(123,168,149,0.08)",borderRadius:9,padding:"10px 12px",marginBottom:8,border:`1px solid ${C.jade}15`}}>
+                        <div style={{color:C.jade,fontSize:9,letterSpacing:"0.06em",marginBottom:4}}>💬 REFLECTION</div>
+                        <div style={{color:"rgba(255,255,255,0.75)",fontSize:12,lineHeight:1.6}}>{entry.reflection}</div>
+                      </div>
+                      {entry.weeklyGrowth&&(
+                        <div style={{background:"rgba(232,132,122,0.07)",borderRadius:9,padding:"10px 12px",marginBottom:8,border:`1px solid ${C.pink}15`}}>
+                          <div style={{color:C.pink,fontSize:9,letterSpacing:"0.06em",marginBottom:6}}>📌 PINTEREST THAT WEEK</div>
+                          <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
+                            {[["Imp",entry.weeklyGrowth.impressions,C.pink],["Clicks",entry.weeklyGrowth.clicks,C.terracotta],["Saves",entry.weeklyGrowth.saves,C.jade]].map(([l,v,col])=>(
+                              <div key={l}><div style={{color:col,fontSize:13,fontWeight:"bold"}}>{fmtK(v||0)}</div><div style={{color:"rgba(255,255,255,0.25)",fontSize:9}}>{l}</div></div>
+                            ))}
+                            {entry.weeklyGrowth.impressions>0&&<div><div style={{color:C.lightJade,fontSize:13,fontWeight:"bold"}}>{((entry.weeklyGrowth.clicks/entry.weeklyGrowth.impressions)*100).toFixed(2)}%</div><div style={{color:"rgba(255,255,255,0.25)",fontSize:9}}>CTR</div></div>}
+                          </div>
+                        </div>
+                      )}
+                      {entry.wins&&entry.wins.length>0&&(
+                        <div style={{background:"rgba(255,255,255,0.03)",borderRadius:9,padding:"10px 12px",marginBottom:8,border:"1px solid rgba(255,255,255,0.05)"}}>
+                          <div style={{color:"rgba(255,255,255,0.4)",fontSize:9,letterSpacing:"0.06em",marginBottom:6}}>🏅 WINS</div>
+                          {entry.wins.map((w,wi)=><div key={wi} style={{color:"rgba(255,255,255,0.6)",fontSize:11,marginBottom:3,lineHeight:1.5}}>· {w.text}</div>)}
+                        </div>
+                      )}
+                      {entry.snapshot&&(
+                        <div style={{background:"rgba(255,255,255,0.03)",borderRadius:9,padding:"10px 12px",marginBottom:10,border:"1px solid rgba(255,255,255,0.05)"}}>
+                          <div style={{color:"rgba(255,255,255,0.4)",fontSize:9,letterSpacing:"0.06em",marginBottom:6}}>📊 SNAPSHOT</div>
+                          <div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
+                            {[["Pageviews",(entry.snapshot.pageviews||0).toLocaleString()],["Posts",entry.snapshot.postsPublished],["Pins",entry.snapshot.pinsLive],["Revenue","$"+entry.snapshot.revenue]].map(([l,v])=>(
+                              <div key={l}><div style={{color:C.cream,fontSize:12,fontWeight:"bold"}}>{v||0}</div><div style={{color:"rgba(255,255,255,0.25)",fontSize:9}}>{l}</div></div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                                          </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      {!data.currentWeekFocus&&journal.length===0&&mode===null&&(
+        <div style={{color:"rgba(255,255,255,0.2)",fontSize:13,fontStyle:"italic",textAlign:"center",padding:"20px 0"}}>Tap "Set Focus" on Monday.<br/>Tap "Reflect" at end of week.</div>
+      )}
+    </div>
+  );
+}
+
+// ── TIMELINE TAB ──────────────────────────────────────────────────────────────
+function TimelineTab({milestones, onToggle}) {
+  const [activeMonth, setActiveMonth] = useState("apr");
+  const currentMonth = MONTHS.find(m => m.id === activeMonth);
+
+  const getMonthPct = (monthId) => {
+    const m = MONTHS.find(x => x.id === monthId);
+    const total = m.milestones.length;
+    const done = m.milestones.filter((ms,i) => ms.done || milestones[`${monthId}-${i}`]).length;
+    return Math.round((done/total)*100);
+  };
+
+  const totalDone = MONTHS.reduce((acc,m) => acc + m.milestones.filter((ms,i) => ms.done || milestones[`${m.id}-${i}`]).length, 0);
+  const totalAll = MONTHS.reduce((acc,m) => acc + m.milestones.length, 0);
+
+  return (
+    <div>
+      <div style={{background:`linear-gradient(135deg,${C.midPlum},${C.darkPlum})`,borderRadius:16,padding:"14px 18px",marginBottom:16,border:"1px solid rgba(255,255,255,0.07)"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <div style={{color:C.cream,fontSize:13,fontFamily:"Georgia, serif"}}>Exit Plan Progress</div>
+          <div style={{color:C.jade,fontSize:12,fontWeight:"bold"}}>{totalDone}/{totalAll} done</div>
+        </div>
+        <Bar value={totalDone} max={totalAll} color={C.jade} height={6}/>
+        <div style={{color:"rgba(255,255,255,0.3)",fontSize:10,marginTop:5}}>List on Flippa: November 1, 2026 · Target: $20,000+</div>
+      </div>
+
+      <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:10,marginBottom:16}}>
+        {MONTHS.map(m => {
+          const pct = getMonthPct(m.id);
+          const isActive = m.id === activeMonth;
+          return (
+            <button key={m.id} onClick={()=>setActiveMonth(m.id)} style={{minWidth:62,padding:"8px 6px",borderRadius:10,border:`1px solid ${isActive?m.color:m.color+"44"}`,cursor:"pointer",textAlign:"center",background:isActive?m.color:"transparent",color:isActive?"white":C.cream,transition:"all 0.15s",flexShrink:0}}>
+              <div style={{fontSize:11,fontWeight:"bold",letterSpacing:0.5}}>{m.short}</div>
+              <div style={{fontSize:10,marginTop:2,opacity:0.85}}>{pct}%</div>
+              <div style={{marginTop:4,height:3,borderRadius:2,background:isActive?"rgba(255,255,255,0.3)":m.color+"33"}}>
+                <div style={{height:"100%",borderRadius:2,background:isActive?"white":m.color,width:`${pct}%`,transition:"width 0.3s"}}/>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {currentMonth && (
+        <div>
+          <div style={{background:`${currentMonth.color}22`,border:`1px solid ${currentMonth.color}44`,borderRadius:16,padding:"14px 18px",marginBottom:14}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+              <div>
+                <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",letterSpacing:1,marginBottom:3}}>{currentMonth.label} 2026</div>
+                <div style={{fontSize:17,fontWeight:"bold",color:C.cream,fontFamily:"Georgia, serif"}}>{currentMonth.theme}</div>
+              </div>
+              <div style={{background:currentMonth.color,color:"white",padding:"4px 10px",borderRadius:8,fontSize:12,fontWeight:"bold"}}>{currentMonth.targets.revenue}</div>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+              {[["Pageviews",currentMonth.targets.pageviews],["Email",currentMonth.targets.email],["Posts",currentMonth.targets.posts]].map(([l,v])=>(
+                <div key={l} style={{background:"rgba(0,0,0,0.2)",borderRadius:8,padding:"8px 10px"}}>
+                  <div style={{fontSize:9,color:"rgba(255,255,255,0.4)",letterSpacing:0.5,marginBottom:3}}>{l.toUpperCase()}</div>
+                  <div style={{fontSize:12,fontWeight:"bold",color:C.cream}}>{v}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{color:"rgba(255,255,255,0.35)",fontSize:9,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:8}}>Milestones</div>
+          {currentMonth.milestones.map((ms,i)=>{
+            const key=`${currentMonth.id}-${i}`;
+            const done=ms.done||milestones[key];
+            return (
+              <div key={i} onClick={()=>!ms.done&&onToggle(key)} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"10px 12px",marginBottom:6,borderRadius:10,background:done?"rgba(123,168,149,0.1)":"rgba(255,255,255,0.03)",border:`1px solid ${done?C.jade+"44":ms.urgent?"rgba(217,119,87,0.35)":"rgba(255,255,255,0.06)"}`,cursor:ms.done?"default":"pointer",transition:"all 0.15s"}}>
+                <div style={{width:18,height:18,borderRadius:"50%",flexShrink:0,marginTop:1,border:`1.5px solid ${done?C.jade:ms.urgent?C.terracotta:"rgba(255,255,255,0.2)"}`,background:done?C.jade:"transparent",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:"white",transition:"all 0.15s"}}>
+                  {done?"✓":""}
+                </div>
+                <div>
+                  <div style={{fontSize:13,color:done?"rgba(255,255,255,0.4)":C.cream,textDecoration:done?"line-through":"none",lineHeight:1.5}}>{ms.t}</div>
+                  {ms.urgent&&!done&&<div style={{fontSize:9,color:C.terracotta,fontWeight:"bold",letterSpacing:0.5,marginTop:2}}>URGENT</div>}
+                </div>
+              </div>
+            );
+          })}
+
+          <div style={{color:"rgba(255,255,255,0.35)",fontSize:9,letterSpacing:"0.08em",textTransform:"uppercase",margin:"14px 0 8px"}}>ARJUN Task Queue</div>
+          <div style={{background:`linear-gradient(135deg,${C.darkPlum},rgba(30,20,40,0.9))`,borderRadius:12,padding:"14px 16px",border:"1px solid rgba(255,255,255,0.05)"}}>
+            {currentMonth.arjunTasks.map((task,i)=>(
+              <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start",marginBottom:i<currentMonth.arjunTasks.length-1?10:0}}>
+                <span style={{color:C.terracotta,fontSize:14,flexShrink:0,marginTop:1}}>→</span>
+                <span style={{fontSize:13,color:"rgba(255,255,255,0.75)",lineHeight:1.5}}>{task}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── ARJUN TASKS TAB ───────────────────────────────────────────────────────────
+function ArjunTab() {
+  const [copied, setCopied] = useState(null);
+  const copyText = (text, i) => {
+    try {
+      const el = document.createElement("textarea");
+      el.value = text;
+      el.style.cssText = "position:fixed;top:-9999px;left:-9999px;opacity:0;";
+      document.body.appendChild(el);
+      el.focus();
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+      setCopied(i);
+      setTimeout(() => setCopied(null), 2000);
+    } catch {
+      setCopied("err");
+      setTimeout(() => setCopied(null), 2000);
+    }
+  };
+  return (
+    <div>
+      <div style={{background:"rgba(255,255,255,0.03)",borderRadius:12,padding:"12px 16px",marginBottom:16,border:"1px solid rgba(255,255,255,0.06)"}}>
+        <div style={{color:"rgba(255,255,255,0.35)",fontSize:9,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:6}}>How to use</div>
+        <div style={{fontSize:13,color:"rgba(255,255,255,0.6)",lineHeight:1.6}}>Tap Copy on any instruction and paste directly into your ARJUN session in Claude Code.</div>
+      </div>
+      {ARJUN_INSTRUCTIONS.map((inst,i)=>(
+        <div key={i} style={{borderRadius:14,overflow:"hidden",marginBottom:12,border:`1px solid ${inst.color}33`}}>
+          <div style={{background:`${inst.color}18`,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div>
+              <div style={{fontSize:9,color:inst.color,fontWeight:"bold",letterSpacing:1,marginBottom:2}}>{inst.priority}</div>
+              <div style={{fontSize:14,fontWeight:"bold",color:C.cream,fontFamily:"Georgia, serif"}}>{inst.title}</div>
+            </div>
+            <button onClick={()=>copyText(inst.text,i)} style={{background:copied===i?C.jade:`${inst.color}30`,border:"none",borderRadius:7,padding:"5px 12px",cursor:"pointer",color:copied===i?"white":inst.color,fontSize:11,fontWeight:"bold",fontFamily:"inherit",transition:"all 0.2s",whiteSpace:"nowrap"}}>
+              {copied===i?"✓ Copied":"Copy"}
+            </button>
+          </div>
+          <div style={{background:`linear-gradient(135deg,${C.midPlum}80,${C.darkPlum})`,padding:"12px 14px",fontSize:13,color:"rgba(255,255,255,0.65)",lineHeight:1.7}}>
+            {inst.text}
+          </div>
+        </div>
+      ))}
+      <div style={{background:"rgba(255,255,255,0.02)",borderRadius:12,padding:"12px 16px",border:`1px solid ${C.plum}44`,marginTop:4}}>
+        <div style={{fontSize:11,fontWeight:"bold",color:C.lightJade,marginBottom:6}}>ARJUN session rule</div>
+        <div style={{fontSize:13,color:"rgba(255,255,255,0.5)",lineHeight:1.6}}>Friday is your only planning day. All other sessions must end with a published post, scheduled pins, or a completed PDF. Planning without output is not progress.</div>
+      </div>
+    </div>
+  );
+}
+
+// ── PARKED TASKS TAB ─────────────────────────────────────────────────────────
+const STATUS_CYCLE = ["parked","ready","done"];
+const STATUS_META = {
+  parked: { label:"Parked",  color:"#8A9AAA", bg:"rgba(138,154,170,0.12)", border:"rgba(138,154,170,0.25)" },
+  ready:  { label:"Ready",   color:"#D97757", bg:"rgba(217,119,87,0.12)",  border:"rgba(217,119,87,0.35)"  },
+  done:   { label:"Done ✓",  color:"#7BA895", bg:"rgba(123,168,149,0.12)", border:"rgba(123,168,149,0.3)"  },
+};
+
+function ParkedTasksTab({ tasks, onSave }) {
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId]     = useState(null);
+  const [form, setForm]         = useState({ title:"", trigger:"", instruction:"", status:"parked" });
+  const [copied, setCopied]     = useState(null);
+  const [filter, setFilter]     = useState("all");
+
+  const resetForm = () => { setForm({ title:"", trigger:"", instruction:"", status:"parked" }); setEditId(null); setShowForm(false); };
+
+  const handleSubmit = () => {
+    if (!form.title.trim() || !form.instruction.trim()) return;
+    let updated;
+    if (editId !== null) {
+      updated = tasks.map(t => t.id === editId ? { ...t, ...form } : t);
+    } else {
+      updated = [...tasks, { ...form, id: Date.now() }];
+    }
+    onSave(updated);
+    resetForm();
+  };
+
+  const handleEdit = (task) => {
+    setForm({ title: task.title, trigger: task.trigger, instruction: task.instruction, status: task.status });
+    setEditId(task.id);
+    setShowForm(true);
+  };
+
+  const handleDelete = (id) => {
+    onSave(tasks.filter(t => t.id !== id));
+  };
+
+  const cycleStatus = (id) => {
+    const task = tasks.find(t => t.id === id);
+    const next = STATUS_CYCLE[(STATUS_CYCLE.indexOf(task.status) + 1) % STATUS_CYCLE.length];
+    onSave(tasks.map(t => t.id === id ? { ...t, status: next } : t));
+  };
+
+  const copyText = (text, id) => {
+    try {
+      const el = document.createElement("textarea");
+      el.value = text;
+      el.style.cssText = "position:fixed;top:-9999px;left:-9999px;opacity:0;";
+      document.body.appendChild(el);
+      el.focus();
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+      setCopied(id);
+      setTimeout(() => setCopied(null), 2000);
+    } catch { setCopied(null); }
+  };
+
+  const filtered = filter === "all" ? tasks : tasks.filter(t => t.status === filter);
+  const counts = { all: tasks.length, parked: tasks.filter(t=>t.status==="parked").length, ready: tasks.filter(t=>t.status==="ready").length, done: tasks.filter(t=>t.status==="done").length };
+
+  const ta = (col) => ({ width:"100%", background:"rgba(255,255,255,0.05)", border:`1px solid ${col}30`, borderRadius:9, color:"white", padding:"9px 11px", fontSize:13, fontFamily:"inherit", resize:"none", outline:"none", boxSizing:"border-box", lineHeight:1.6 });
+
+  return (
+    <div>
+      {/* header row */}
+      <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14}}>
+        <div style={{color:"rgba(255,255,255,0.35)", fontSize:9, letterSpacing:"0.1em", textTransform:"uppercase"}}>
+          {counts.all} tasks · {counts.ready} ready · {counts.done} done
+        </div>
+        <button onClick={()=>{ resetForm(); setShowForm(true); }} style={{background:showForm&&editId===null?C.terracotta:"rgba(255,255,255,0.07)", border:"none", borderRadius:8, color:showForm&&editId===null?"white":"rgba(255,255,255,0.5)", fontSize:11, padding:"5px 12px", cursor:"pointer", fontFamily:"inherit", fontWeight:"bold"}}>
+          {showForm && editId===null ? "Cancel" : "+ New Task"}
+        </button>
+      </div>
+
+      {/* add / edit form */}
+      {showForm && (
+        <div style={{background:`linear-gradient(135deg,rgba(74,58,92,0.7),rgba(61,46,74,0.9))`, borderRadius:14, padding:16, marginBottom:16, border:`1px solid ${C.terracotta}33`}}>
+          <div style={{color:"rgba(255,255,255,0.4)", fontSize:9, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:12}}>{editId!==null?"Edit Task":"New Parked Task"}</div>
+
+          <div style={{marginBottom:10}}>
+            <div style={{color:"rgba(255,255,255,0.38)", fontSize:10, marginBottom:4}}>Task Title *</div>
+            <input value={form.title} onChange={e=>setForm(p=>({...p,title:e.target.value}))} placeholder="e.g. Gumroad product setup" style={{...ta(C.terracotta), resize:undefined}} />
+          </div>
+
+          <div style={{marginBottom:10}}>
+            <div style={{color:"rgba(255,255,255,0.38)", fontSize:10, marginBottom:4}}>When to action (date or trigger)</div>
+            <input value={form.trigger} onChange={e=>setForm(p=>({...p,trigger:e.target.value}))} placeholder="e.g. July 2026  /  When traffic hits 10K" style={{...ta(C.jade), resize:undefined}} />
+          </div>
+
+          <div style={{marginBottom:10}}>
+            <div style={{color:"rgba(255,255,255,0.38)", fontSize:10, marginBottom:4}}>Full instruction for ARJUN *</div>
+            <textarea rows={4} value={form.instruction} onChange={e=>setForm(p=>({...p,instruction:e.target.value}))} placeholder="Paste the full ARJUN instruction here. This is what gets copied." style={ta(C.lightJade)} />
+          </div>
+
+          <div style={{marginBottom:14}}>
+            <div style={{color:"rgba(255,255,255,0.38)", fontSize:10, marginBottom:6}}>Status</div>
+            <div style={{display:"flex", gap:6}}>
+              {STATUS_CYCLE.map(s => (
+                <button key={s} onClick={()=>setForm(p=>({...p,status:s}))} style={{flex:1, padding:"6px 0", borderRadius:7, border:`1px solid ${form.status===s?STATUS_META[s].color:STATUS_META[s].border}`, background:form.status===s?STATUS_META[s].bg:"transparent", color:form.status===s?STATUS_META[s].color:"rgba(255,255,255,0.3)", fontSize:11, fontWeight:form.status===s?"bold":"normal", cursor:"pointer", fontFamily:"inherit", transition:"all 0.2s"}}>
+                  {STATUS_META[s].label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{display:"flex", gap:8}}>
+            <button onClick={resetForm} style={{flex:1, padding:"8px", background:"rgba(255,255,255,0.04)", border:"none", borderRadius:9, color:"rgba(255,255,255,0.28)", cursor:"pointer", fontFamily:"inherit", fontSize:11}}>Cancel</button>
+            <button onClick={handleSubmit} disabled={!form.title.trim()||!form.instruction.trim()} style={{flex:2, padding:"8px", background:form.title.trim()&&form.instruction.trim()?C.terracotta:"rgba(255,255,255,0.1)", border:"none", borderRadius:9, color:"white", fontWeight:"bold", cursor:form.title.trim()&&form.instruction.trim()?"pointer":"default", fontFamily:"Georgia, serif", fontSize:13}}>
+              {editId!==null ? "Save Changes" : "Park This Task"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* filter pills */}
+      {tasks.length > 0 && (
+        <div style={{display:"flex", gap:6, marginBottom:14}}>
+          {[["all","All",counts.all],["parked","Parked",counts.parked],["ready","Ready",counts.ready],["done","Done",counts.done]].map(([key,label,count])=>(
+            <button key={key} onClick={()=>setFilter(key)} style={{flex:1, padding:"5px 0", borderRadius:7, border:"none", cursor:"pointer", fontFamily:"inherit", fontSize:10, background:filter===key?(key==="ready"?C.terracotta:key==="done"?C.jade:key==="parked"?"#8A9AAA":"rgba(255,255,255,0.15)"):"rgba(255,255,255,0.05)", color:filter===key?"white":"rgba(255,255,255,0.38)", fontWeight:filter===key?"bold":"normal", transition:"all 0.2s"}}>
+              {label} {count>0?`(${count})`:""}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* task cards */}
+      {filtered.length === 0 && !showForm && (
+        <div style={{color:"rgba(255,255,255,0.18)", fontSize:13, fontStyle:"italic", textAlign:"center", padding:"28px 0", lineHeight:1.8}}>
+          {tasks.length===0?"No parked tasks yet.\nTap + New Task to add one.":"No tasks with this status."}
+        </div>
+      )}
+
+      <div style={{display:"flex", flexDirection:"column", gap:10}}>
+        {filtered.map(task => {
+          const sm = STATUS_META[task.status];
+          const isCopied = copied === task.id;
+          return (
+            <div key={task.id} style={{borderRadius:14, overflow:"hidden", border:`1px solid ${sm.border}`, background:`linear-gradient(135deg,${C.midPlum}80,${C.darkPlum})`}}>
+              {/* card header */}
+              <div style={{padding:"11px 14px", borderBottom:"1px solid rgba(255,255,255,0.05)", display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10}}>
+                <div style={{flex:1, minWidth:0}}>
+                  <div style={{color:C.cream, fontSize:14, fontWeight:"bold", fontFamily:"Georgia, serif", lineHeight:1.3, marginBottom:task.trigger?4:0}}>{task.title}</div>
+                  {task.trigger && (
+                    <div style={{display:"flex", alignItems:"center", gap:5}}>
+                      <span style={{color:"rgba(255,255,255,0.3)", fontSize:10}}>⏱</span>
+                      <span style={{color:"rgba(255,255,255,0.45)", fontSize:11, lineHeight:1.4}}>{task.trigger}</span>
+                    </div>
+                  )}
+                </div>
+                {/* status badge — tap to cycle */}
+                <button onClick={()=>cycleStatus(task.id)} style={{flexShrink:0, background:sm.bg, border:`1px solid ${sm.border}`, borderRadius:20, padding:"3px 10px", color:sm.color, fontSize:10, fontWeight:"bold", cursor:"pointer", fontFamily:"inherit", whiteSpace:"nowrap", transition:"all 0.2s"}}>
+                  {sm.label}
+                </button>
+              </div>
+
+              {/* instruction preview */}
+              <div style={{padding:"10px 14px", fontSize:12, color:"rgba(255,255,255,0.55)", lineHeight:1.7, borderBottom:"1px solid rgba(255,255,255,0.04)"}}>
+                {task.instruction.length > 160 ? task.instruction.slice(0,160)+"…" : task.instruction}
+              </div>
+
+              {/* action row */}
+              <div style={{display:"flex", gap:0}}>
+                <button onClick={()=>copyText(task.instruction, task.id)} style={{flex:2, padding:"9px 0", background:isCopied?"rgba(123,168,149,0.15)":"transparent", border:"none", borderRight:"1px solid rgba(255,255,255,0.05)", color:isCopied?C.jade:"rgba(255,255,255,0.4)", fontSize:11, fontWeight:"bold", cursor:"pointer", fontFamily:"inherit", transition:"all 0.2s"}}>
+                  {isCopied ? "✓ Copied" : "Copy Instruction"}
+                </button>
+                <button onClick={()=>handleEdit(task)} style={{flex:1, padding:"9px 0", background:"transparent", border:"none", borderRight:"1px solid rgba(255,255,255,0.05)", color:"rgba(255,255,255,0.28)", fontSize:11, cursor:"pointer", fontFamily:"inherit"}}>
+                  Edit
+                </button>
+                <button onClick={()=>handleDelete(task.id)} style={{flex:1, padding:"9px 0", background:"transparent", border:"none", color:"rgba(255,255,255,0.2)", fontSize:11, cursor:"pointer", fontFamily:"inherit"}}>
+                  Delete
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── edit modal ────────────────────────────────────────────────────────────────
+function EditModal({field,value,onSave,onClose}) {
+  const [val,setVal]=useState(value===0?"":String(value));
+  const LABELS={pageviews:"Monthly Pageviews (GA4)",revenue:"Monthly Revenue (USD)",postsPublished:"Posts Published",pinsLive:"Pins Live on Pinterest",pinterestImpressions:"Pinterest Impressions",pinterestOutboundClicks:"Pinterest Outbound Clicks",pinterestSaves:"Pinterest Saves"};
+  const HINTS={pinterestImpressions:"Pinterest Analytics → Overview → Impressions (last 30 days)",pinterestOutboundClicks:"Pinterest Analytics → Overview → Outbound Clicks",pinterestSaves:"Pinterest Analytics → Overview → Saves",pageviews:"GA4 → Reports → Engagement → Overview → Views",revenue:"Total earnings this month (USD)"};
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.82)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}} onClick={onClose}>
+      <div onClick={e=>e.stopPropagation()} style={{background:`linear-gradient(135deg,${C.midPlum},${C.darkPlum})`,borderRadius:20,padding:26,width:"100%",maxWidth:360,border:"1px solid rgba(255,255,255,0.1)",boxShadow:"0 24px 60px rgba(0,0,0,0.6)"}}>
+        <div style={{color:C.cream,fontFamily:"Georgia, serif",fontSize:17,marginBottom:HINTS[field]?5:16}}>{LABELS[field]||field}</div>
+        {HINTS[field]&&<div style={{color:"rgba(255,255,255,0.3)",fontSize:11,marginBottom:14,lineHeight:1.5}}>💡 {HINTS[field]}</div>}
+        <input type="text" inputMode="numeric" value={val} onChange={e=>setVal(e.target.value.replace(/[^0-9,]/g,""))} placeholder="Enter number" style={{width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:10,color:"white",padding:"12px 14px",fontSize:22,fontFamily:"Georgia, serif",outline:"none",boxSizing:"border-box"}}/>
+        <div style={{display:"flex",gap:10,marginTop:16}}>
+          <button onClick={onClose} style={{flex:1,padding:12,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:10,color:"rgba(255,255,255,0.38)",cursor:"pointer",fontFamily:"inherit"}}>Cancel</button>
+          <button onClick={()=>onSave(field,parseInt(val.replace(/,/g,""),10)||0)} style={{flex:2,padding:12,background:C.terracotta,border:"none",borderRadius:10,color:"white",fontWeight:"bold",cursor:"pointer",fontFamily:"Georgia, serif",fontSize:14}}>Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Tasks Tab ─────────────────────────────────────────────────────────────────
+function TasksTab({ tasks }) {
+  // tasks structure: { owner: [], arjun: {} }
+  const ownerTasks = tasks?.owner || [];
+  const arjunTask = tasks?.arjun || {};
+
+  const statusColor = {
+    'done': '#7BA895',
+    'in-progress': '#C4956A',
+    'pending': '#D97757'
+  };
+
+  const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+
+  const sortedOwnerTasks = [...ownerTasks].sort((a, b) => {
+    if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
+      return priorityOrder[a.priority] - priorityOrder[b.priority];
+    }
+    return a.text.localeCompare(b.text);
+  });
+
+  return (
+    <div>
+      {/* Section A — My Tasks Today */}
+      <div style={{ background: `linear-gradient(135deg, ${C.midPlum}, ${C.darkPlum})`, borderRadius: 16, padding: 18, marginBottom: 16, border: '1px solid rgba(255,255,255,0.07)' }}>
+        <div style={{ color: 'rgba(255,255,255,0.38)', fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 12 }}>My Tasks Today</div>
+        {sortedOwnerTasks.length === 0 ? (
+          <div style={{ color: 'rgba(255,255,255,0.2)', fontSize: 13, fontStyle: 'italic' }}>No tasks set for today.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {sortedOwnerTasks.map((task, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 10, border: `1px solid ${statusColor[task.status] || '#8A9AAA'}33` }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: statusColor[task.status] || '#8A9AAA', flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ color: C.cream, fontSize: 13, lineHeight: 1.5 }}>{task.text}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
+                    <span style={{ color: statusColor[task.status] || '#8A9AAA', fontSize: 9, fontWeight: 'bold' }}>{task.status.toUpperCase()}</span>
+                    <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 9 }}>•</span>
+                    <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 9 }}>{task.priority}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Section B — ARJUN's Current Task */}
+      <div style={{ background: `linear-gradient(135deg, ${C.midPlum}, ${C.darkPlum})`, borderRadius: 16, padding: 18, border: `1px solid ${statusColor[arjunTask.status] || '#8A9AAA'}33` }}>
+        <div style={{ color: 'rgba(255,255,255,0.38)', fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 12 }}>ARJUN's Current Task</div>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <div style={{ width: 10, height: 10, borderRadius: '50%', background: statusColor[arjunTask.status] || '#8A9AAA', flexShrink: 0, marginTop: 4 }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ color: C.cream, fontSize: 15, fontWeight: 'bold', lineHeight: 1.3 }}>{arjunTask.current || 'No active task'}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+              <span style={{ color: statusColor[arjunTask.status] || '#8A9AAA', fontSize: 10, fontWeight: 'bold' }}>{arjunTask.status ? arjunTask.status.toUpperCase() : 'UNKNOWN'}</span>
+              <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 9 }}>•</span>
+              <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 9 }}>Last updated: {arjunTask.lastUpdated || '—'}</span>
+            </div>
+            {arjunTask.blocker && (
+              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 8, fontStyle: 'italic' }}>Blocker: {arjunTask.blocker}</div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── main ──────────────────────────────────────────────────────────────────────
+function Dashboard() {
+  const [data,setData]=useState(DEFAULT_DATA);
+  const [growth,setGrowth]=useState({weekly:[],monthly:[]});
+  const [tab,setTab]=useState("pinterest");
+  const [editing,setEditing]=useState(null);
+  const [loaded,setLoaded]=useState(false);
+  const [milestones,setMilestones]=useState({});
+  const [parkedTasks,setParkedTasks]=useState([]);
+  const [tasks, setTasks] = useState({ owner: [], arjun: {} });
+  const [quoteIdx]=useState(()=>Math.floor(Math.random()*QUOTES.length));
+  const [today]=useState(()=>new Date().toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"}));
+
+  useEffect(()=>{
+    (async()=>{
+      // First try to load from dashboard-data.json (master copy)
+      try {
+        const response = await fetch('/dashboard/dashboard-data.json');
+        if (response.ok) {
+          const remote = await response.json();
+          // Update tasks from remote
+          if (remote.tasks) {
+            setTasks(remote.tasks);
+          }
+          // Update metrics from remote (if any)
+          if (remote.metrics) {
+            setData(prev => ({ ...prev, ...remote.metrics }));
+          }
+          // Update analytics from remote (if any)
+          if (remote.analytics) {
+            setData(prev => ({
+              ...prev,
+              analytics: {
+                ...prev.analytics,
+                ...remote.analytics
+              }
+            }));
+          }
+          // Update pinterest data from remote (if any)
+          if (remote.pinterest) {
+            setData(prev => ({
+              ...prev,
+              pinterestImpressions: remote.pinterest.impressions || prev.pinterestImpressions,
+              pinterestOutboundClicks: remote.pinterest.outboundClicks || prev.pinterestOutboundClicks,
+              pinterestSaves: remote.pinterest.saves || prev.pinterestSaves
+            }));
+          }
+        }
+      } catch (err) {
+        // Fall back to localStorage if fetch fails (offline)
+        console.log('Dashboard data fetch failed, using localStorage');
+      }
+
+      const saved=await dsGet(STORAGE_KEY); if(saved) setData({...DEFAULT_DATA,...saved});
+      const savedG=await dsGet(GROWTH_KEY); if(savedG) setGrowth(savedG);
+      const savedM=await dsGet(MILESTONE_KEY); if(savedM) setMilestones(savedM);
+      const savedP=await dsGet(PARKED_KEY); if(savedP) setParkedTasks(savedP);
+      setLoaded(true);
+    })();
+  },[]);
+
+  const upd=useCallback(async patch=>{
+    setData(prev=>{
+      const u={...prev,...patch,lastUpdated:new Date().toISOString()};
+      dsSet(STORAGE_KEY,u);
+      return u;
+    });
+  },[]);
+
+  const toggleMilestone = useCallback(async (key) => {
+    setMilestones(prev=>{
+      const u={...prev,[key]:!prev[key]};
+      dsSet(MILESTONE_KEY,u);
+      return u;
+    });
+  },[]);
+
+  const handleSaveParked = useCallback(async (updated) => {
+    setParkedTasks(updated);
+    await dsSet(PARKED_KEY, updated);
+  }, []);
+
+  const handleEdit=useCallback(f=>setEditing(f),[]);
+  const handleSave=useCallback(async(field,value)=>{await upd({[field]:value});setEditing(null);},[upd]);
+  const handleSaveFocus=useCallback(async text=>{await upd({currentWeekFocus:text,currentWeekLabel:weekOf()});},[upd]);
+  const handleCloseWeek=useCallback(async(reflection,weekWins,snapshot,weeklyGrowth)=>{
+    setData(prev=>{
+      const entry={weekLabel:prev.currentWeekLabel||weekOf(),focus:prev.currentWeekFocus,reflection,wins:weekWins,snapshot,weeklyGrowth,closedAt:new Date().toISOString()};
+      const u={...prev,journal:[...(prev.journal||[]),entry],currentWeekFocus:"",currentWeekLabel:"",lastUpdated:new Date().toISOString()};
+      dsSet(STORAGE_KEY,u);
+      return u;
+    });
+  },[]);
+  const handleAddWin=useCallback(win=>{
+    setData(prev=>{
+      const u={...prev,wins:[...(prev.wins||[]),win],lastUpdated:new Date().toISOString()};
+      dsSet(STORAGE_KEY,u);
+      return u;
+    });
+  },[]);
+  const handleAddWeekly=useCallback(async e=>{const u={...growth,weekly:[...(growth.weekly||[]),e]};setGrowth(u);await dsSet(GROWTH_KEY,u);},[growth]);
+  const handleAddMonthly=useCallback(async e=>{const u={...growth,monthly:[...(growth.monthly||[]),e]};setGrowth(u);await dsSet(GROWTH_KEY,u);},[growth]);
+
+  const TABS=[
+    {key:"pinterest",label:"Pinterest",icon:"📌"},
+    {key:"metrics",label:"Metrics",icon:"📊"},
+    {key:"journal",label:"Journal",icon:"📓"},
+    {key:"timeline",label:"Timeline",icon:"🗓"},
+    {key:"arjun",label:"ARJUN",icon:"🤖"},
+    {key:"tasks",label:"Tasks",icon:"✅"},
+    {key:"parked",label:"Parked",icon:"🗂"},
+  ];
+
+  if(!loaded) return (
+    <div style={{minHeight:"100vh",background:`linear-gradient(160deg,${C.darkPlum} 0%,#1E1528 100%)`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"Georgia, serif"}}>
+      <div style={{color:"rgba(255,255,255,0.4)",fontSize:14,letterSpacing:"0.08em"}}>Loading your dashboard…</div>
+    </div>
+  );
+
+  return (
+    <div style={{minHeight:"100vh",background:`linear-gradient(160deg,${C.darkPlum} 0%,#2A1F35 40%,#1E1528 100%)`,fontFamily:"'Palatino Linotype',Palatino,Georgia,serif",color:C.cream,paddingBottom:80}}>
+      <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,background:`radial-gradient(ellipse 600px 400px at 10% 20%,${C.plum}40,transparent),radial-gradient(ellipse 400px 300px at 90% 70%,${C.terracotta}15,transparent)`}}/>
+      <div style={{position:"relative",zIndex:1,maxWidth:480,margin:"0 auto",padding:"20px 16px 16px"}}>
+        <div style={{textAlign:"center",marginBottom:16}}>
+          <div style={{display:"inline-block",background:`linear-gradient(135deg,${C.terracotta},${C.persimmon})`,borderRadius:100,padding:"5px 16px",fontSize:11,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:8,color:"white"}}>newmomstuff.com</div>
+          <h1 style={{fontSize:24,fontWeight:"normal",margin:"0 0 3px",background:`linear-gradient(135deg,${C.cream},${C.dustyCream}90)`,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",letterSpacing:"-0.02em",lineHeight:1.2}}>The Exit Dashboard</h1>
+          <div style={{color:"rgba(255,255,255,0.26)",fontSize:11}}>{today}</div>
+        </div>
+        <div style={{background:`linear-gradient(135deg,rgba(93,78,109,0.55),rgba(61,46,74,0.75))`,borderRadius:12,padding:"11px 16px",marginBottom:14,border:`1px solid rgba(217,119,87,0.2)`,cursor:"pointer"}} onClick={()=>setTab("journal")}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div style={{display:"flex",alignItems:"center",gap:7}}>
+              <span style={{fontSize:13}}>🎯</span>
+              <div style={{color:"rgba(255,255,255,0.38)",fontSize:9,letterSpacing:"0.08em",textTransform:"uppercase"}}>This Week's Focus</div>
+            </div>
+            <div style={{color:"rgba(255,255,255,0.22)",fontSize:9}}>Journal →</div>
+          </div>
+          {data.currentWeekFocus?<div style={{color:C.cream,fontSize:13,lineHeight:1.5,marginTop:5}}>{data.currentWeekFocus}</div>:<div style={{color:"rgba(255,255,255,0.2)",fontSize:12,fontStyle:"italic",marginTop:5}}>Tap to set this week's focus →</div>}
+        </div>
+        <div style={{background:"linear-gradient(135deg,rgba(217,119,87,0.08),rgba(123,168,149,0.05))",border:"1px solid rgba(217,119,87,0.13)",borderRadius:12,padding:"10px 16px",marginBottom:18,textAlign:"center"}}>
+          <div style={{color:"rgba(255,255,255,0.45)",fontSize:12,fontStyle:"italic",lineHeight:1.6}}>"{QUOTES[quoteIdx]}"</div>
+        </div>
+        {tab==="pinterest"&&<PinterestTab data={data} growth={growth} onEdit={handleEdit} onAddWeekly={handleAddWeekly} onAddMonthly={handleAddMonthly}/>}
+        {tab==="metrics"&&<MetricsTab data={data} onEdit={handleEdit}/>}
+        {tab==="journal"&&<JournalTab data={data} growth={growth} onSaveFocus={handleSaveFocus} onCloseWeek={handleCloseWeek} onAddWin={handleAddWin}/>}
+        {tab==="timeline"&&<TimelineTab milestones={milestones} onToggle={toggleMilestone}/>}
+        {tab==="arjun"&&<ArjunTab/>}
+        {tab==="tasks"&&<TasksTab tasks={tasks} />}
+        {tab==="parked"&&<ParkedTasksTab tasks={parkedTasks} onSave={handleSaveParked}/>}
+        {data.lastUpdated&&<div style={{textAlign:"center",color:"rgba(255,255,255,0.13)",fontSize:10,marginTop:16}}>Last updated {new Date(data.lastUpdated).toLocaleDateString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</div>}
+      </div>
+      <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:100,display:"flex",justifyContent:"center"}}>
+        <div style={{maxWidth:480,width:"100%",background:`rgba(30,21,40,0.96)`,backdropFilter:"blur(16px)",borderTop:"1px solid rgba(255,255,255,0.08)",display:"flex",padding:"8px 0 12px"}}>
+          {TABS.map(t=>(
+            <button key={t.key} onClick={()=>setTab(t.key)} style={{flex:1,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",display:"flex",flexDirection:"column",alignItems:"center",gap:4,padding:"6px 0",transition:"all 0.2s"}}>
+              <div style={{fontSize:18,filter:tab===t.key?"none":"grayscale(1) opacity(0.4)",transition:"filter 0.2s"}}>{t.icon}</div>
+              <div style={{fontSize:9,letterSpacing:"0.05em",color:tab===t.key?C.terracotta:"rgba(255,255,255,0.28)",fontWeight:tab===t.key?"bold":"normal",transition:"color 0.2s"}}>{t.label}</div>
+              {tab===t.key&&<div style={{width:20,height:2,borderRadius:100,background:C.terracotta,marginTop:1}}/>}
+            </button>
+          ))}
+        </div>
+      </div>
+      {editing&&<EditModal field={editing} value={data[editing]??0} onSave={handleSave} onClose={()=>setEditing(null)}/>}
+    </div>
+  );
+}
+
+window.Dashboard = Dashboard;
