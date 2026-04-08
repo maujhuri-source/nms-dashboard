@@ -418,12 +418,21 @@ function MetricsTab({data,onEdit}) {
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
             <div style={{background:"rgba(255,255,255,0.03)",borderRadius:10,padding:"10px 12px"}}>
               <div style={{color:"rgba(255,255,255,0.35)",fontSize:9}}>Sessions (this week)</div>
-              <div style={{color:C.cream,fontSize:16,fontWeight:"bold"}}>{data.analytics.ga4Sessions.toLocaleString()}</div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div style={{color:C.cream,fontSize:16,fontWeight:"bold"}}>{data.analytics.ga4Sessions.toLocaleString()}</div>
+                <button onClick={()=>onEdit('analytics.ga4Sessions')} style={{background:"rgba(255,255,255,0.07)",border:"none",borderRadius:6,color:"rgba(255,255,255,0.38)",fontSize:10,padding:"3px 8px",cursor:"pointer",fontFamily:"inherit"}}>EDIT</button>
+              </div>
             </div>
             <div style={{background:"rgba(255,255,255,0.03)",borderRadius:10,padding:"10px 12px"}}>
               <div style={{color:"rgba(255,255,255,0.35)",fontSize:9}}>Top post</div>
-              <div style={{color:C.cream,fontSize:13,fontWeight:"bold",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{data.analytics.ga4TopPost || "—"}</div>
-              <div style={{color:C.jade,fontSize:11}}>{data.analytics.ga4TopPostViews.toLocaleString()} views</div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                <div style={{color:C.cream,fontSize:13,fontWeight:"bold",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",flex:1}}>{data.analytics.ga4TopPost || "—"}</div>
+                <button onClick={()=>onEdit('analytics.ga4TopPost')} style={{background:"rgba(255,255,255,0.07)",border:"none",borderRadius:6,color:"rgba(255,255,255,0.38)",fontSize:10,padding:"3px 8px",cursor:"pointer",fontFamily:"inherit",marginLeft:8}}>EDIT</button>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div style={{color:C.jade,fontSize:11}}>{data.analytics.ga4TopPostViews.toLocaleString()} views</div>
+                <button onClick={()=>onEdit('analytics.ga4TopPostViews')} style={{background:"rgba(255,255,255,0.07)",border:"none",borderRadius:6,color:"rgba(255,255,255,0.38)",fontSize:10,padding:"3px 8px",cursor:"pointer",fontFamily:"inherit"}}>EDIT</button>
+              </div>
             </div>
           </div>
           {data.analytics.ga4WeekOnWeekChange !== 0 && (
@@ -439,16 +448,25 @@ function MetricsTab({data,onEdit}) {
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
             <div style={{background:"rgba(255,255,255,0.03)",borderRadius:10,padding:"10px 12px"}}>
               <div style={{color:"rgba(255,255,255,0.35)",fontSize:9}}>Avg position</div>
-              <div style={{color:C.cream,fontSize:16,fontWeight:"bold"}}>{data.analytics.gscAvgPosition || "—"}</div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div style={{color:C.cream,fontSize:16,fontWeight:"bold"}}>{data.analytics.gscAvgPosition || "—"}</div>
+                <button onClick={()=>onEdit('analytics.gscAvgPosition')} style={{background:"rgba(255,255,255,0.07)",border:"none",borderRadius:6,color:"rgba(255,255,255,0.38)",fontSize:10,padding:"3px 8px",cursor:"pointer",fontFamily:"inherit"}}>EDIT</button>
+              </div>
             </div>
             <div style={{background:"rgba(255,255,255,0.03)",borderRadius:10,padding:"10px 12px"}}>
               <div style={{color:"rgba(255,255,255,0.35)",fontSize:9}}>Total clicks</div>
-              <div style={{color:C.cream,fontSize:16,fontWeight:"bold"}}>{data.analytics.gscClicks.toLocaleString()}</div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div style={{color:C.cream,fontSize:16,fontWeight:"bold"}}>{data.analytics.gscClicks.toLocaleString()}</div>
+                <button onClick={()=>onEdit('analytics.gscClicks')} style={{background:"rgba(255,255,255,0.07)",border:"none",borderRadius:6,color:"rgba(255,255,255,0.38)",fontSize:10,padding:"3px 8px",cursor:"pointer",fontFamily:"inherit"}}>EDIT</button>
+              </div>
             </div>
           </div>
           <div style={{marginTop:8}}>
             <div style={{color:"rgba(255,255,255,0.35)",fontSize:9}}>Top query</div>
-            <div style={{color:C.cream,fontSize:12,fontWeight:"bold"}}>{data.analytics.gscTopQuery || "—"}</div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{color:C.cream,fontSize:12,fontWeight:"bold",flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{data.analytics.gscTopQuery || "—"}</div>
+              <button onClick={()=>onEdit('analytics.gscTopQuery')} style={{background:"rgba(255,255,255,0.07)",border:"none",borderRadius:6,color:"rgba(255,255,255,0.38)",fontSize:10,padding:"3px 8px",cursor:"pointer",fontFamily:"inherit",marginLeft:8}}>EDIT</button>
+            </div>
           </div>
         </div>
 
@@ -989,17 +1007,32 @@ function ParkedTasksTab({ tasks, onSave }) {
 // ── edit modal ────────────────────────────────────────────────────────────────
 function EditModal({field,value,onSave,onClose}) {
   const [val,setVal]=useState(value===0?"":String(value));
-  const LABELS={pageviews:"Monthly Pageviews (GA4)",revenue:"Monthly Revenue (USD)",postsPublished:"Posts Published",pinsLive:"Pins Live on Pinterest",pinterestImpressions:"Pinterest Impressions",pinterestOutboundClicks:"Pinterest Outbound Clicks",pinterestSaves:"Pinterest Saves"};
-  const HINTS={pinterestImpressions:"Pinterest Analytics → Overview → Impressions (last 30 days)",pinterestOutboundClicks:"Pinterest Analytics → Overview → Outbound Clicks",pinterestSaves:"Pinterest Analytics → Overview → Saves",pageviews:"GA4 → Reports → Engagement → Overview → Views",revenue:"Total earnings this month (USD)"};
+  const LABELS={pageviews:"Monthly Pageviews (GA4)",revenue:"Monthly Revenue (USD)",postsPublished:"Posts Published",pinsLive:"Pins Live on Pinterest",pinterestImpressions:"Pinterest Impressions",pinterestOutboundClicks:"Pinterest Outbound Clicks",pinterestSaves:"Pinterest Saves","analytics.ga4Sessions":"GA4 Sessions (this week)","analytics.ga4TopPost":"GA4 Top Post","analytics.ga4TopPostViews":"GA4 Top Post Views","analytics.gscAvgPosition":"GSC Average Position","analytics.gscClicks":"GSC Total Clicks","analytics.gscTopQuery":"GSC Top Query"};
+  const HINTS={pinterestImpressions:"Pinterest Analytics → Overview → Impressions (last 30 days)",pinterestOutboundClicks:"Pinterest Analytics → Overview → Outbound Clicks",pinterestSaves:"Pinterest Analytics → Overview → Saves",pageviews:"GA4 → Reports → Engagement → Overview → Views",revenue:"Total earnings this month (USD)","analytics.ga4Sessions":"GA4 → Reports → Engagement → Overview → Sessions (last 7 days)","analytics.ga4TopPost":"GA4 → Reports → Engagement → Pages and screens → Top page title","analytics.ga4TopPostViews":"Number of views for the top post","analytics.gscAvgPosition":"Google Search Console → Performance → Average position","analytics.gscClicks":"Google Search Console → Performance → Total clicks","analytics.gscTopQuery":"Google Search Console → Performance → Top query"};
+  const isText=field.includes('TopPost')||field.includes('TopQuery');
+  const isDecimal=field.includes('gscAvgPosition');
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.82)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}} onClick={onClose}>
       <div onClick={e=>e.stopPropagation()} style={{background:`linear-gradient(135deg,${C.midPlum},${C.darkPlum})`,borderRadius:20,padding:26,width:"100%",maxWidth:360,border:"1px solid rgba(255,255,255,0.1)",boxShadow:"0 24px 60px rgba(0,0,0,0.6)"}}>
         <div style={{color:C.cream,fontFamily:"Georgia, serif",fontSize:17,marginBottom:HINTS[field]?5:16}}>{LABELS[field]||field}</div>
         {HINTS[field]&&<div style={{color:"rgba(255,255,255,0.3)",fontSize:11,marginBottom:14,lineHeight:1.5}}>💡 {HINTS[field]}</div>}
-        <input type="text" inputMode="numeric" value={val} onChange={e=>setVal(e.target.value.replace(/[^0-9,]/g,""))} placeholder="Enter number" style={{width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:10,color:"white",padding:"12px 14px",fontSize:22,fontFamily:"Georgia, serif",outline:"none",boxSizing:"border-box"}}/>
+        {isText ? (
+          <input type="text" value={val} onChange={e=>setVal(e.target.value)} placeholder="Enter text" style={{width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:10,color:"white",padding:"12px 14px",fontSize:22,fontFamily:"Georgia, serif",outline:"none",boxSizing:"border-box"}}/>
+        ) : (
+          <input type="text" inputMode="numeric" value={val} onChange={e=>setVal(isDecimal ? e.target.value.replace(/[^0-9,.]/g,"") : e.target.value.replace(/[^0-9,]/g,""))} placeholder="Enter number" style={{width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:10,color:"white",padding:"12px 14px",fontSize:22,fontFamily:"Georgia, serif",outline:"none",boxSizing:"border-box"}}/>
+        )}
         <div style={{display:"flex",gap:10,marginTop:16}}>
           <button onClick={onClose} style={{flex:1,padding:12,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:10,color:"rgba(255,255,255,0.38)",cursor:"pointer",fontFamily:"inherit"}}>Cancel</button>
-          <button onClick={()=>onSave(field,parseInt(val.replace(/,/g,""),10)||0)} style={{flex:2,padding:12,background:C.terracotta,border:"none",borderRadius:10,color:"white",fontWeight:"bold",cursor:"pointer",fontFamily:"Georgia, serif",fontSize:14}}>Save</button>
+          <button onClick={() => {
+            if (isText) {
+              onSave(field, val.trim());
+            } else {
+              const cleaned = val.replace(/,/g, "");
+              let num = isDecimal ? parseFloat(cleaned) : parseInt(cleaned, 10);
+              if (isNaN(num)) num = 0;
+              onSave(field, num);
+            }
+          }} style={{flex:2,padding:12,background:C.terracotta,border:"none",borderRadius:10,color:"white",fontWeight:"bold",cursor:"pointer",fontFamily:"Georgia, serif",fontSize:14}}>Save</button>
         </div>
       </div>
     </div>
@@ -1136,9 +1169,37 @@ export default function Dashboard() {
     })();
   },[]);
 
+  const mergeDeep = (prev, patch) => {
+    const result = { ...prev };
+    for (const key in patch) {
+      if (patch.hasOwnProperty(key)) {
+        if (typeof patch[key] === 'object' && patch[key] !== null && !Array.isArray(patch[key]) &&
+            typeof prev[key] === 'object' && prev[key] !== null && !Array.isArray(prev[key])) {
+          result[key] = { ...prev[key], ...patch[key] };
+        } else {
+          result[key] = patch[key];
+        }
+      }
+    }
+    return result;
+  };
+
+  const dotToObject = (path, value) => {
+    const parts = path.split('.');
+    let result = {};
+    let current = result;
+    for (let i = 0; i < parts.length - 1; i++) {
+      current[parts[i]] = {};
+      current = current[parts[i]];
+    }
+    current[parts[parts.length - 1]] = value;
+    return result;
+  };
+
   const upd=useCallback(async patch=>{
     setData(prev=>{
-      const u={...prev,...patch,lastUpdated:new Date().toISOString()};
+      const u = mergeDeep(prev, patch);
+      u.lastUpdated = new Date().toISOString();
       dsSet(STORAGE_KEY,u);
       return u;
     });
@@ -1158,7 +1219,14 @@ export default function Dashboard() {
   }, []);
 
   const handleEdit=useCallback(f=>setEditing(f),[]);
-  const handleSave=useCallback(async(field,value)=>{await upd({[field]:value});setEditing(null);},[upd]);
+  const handleSave=useCallback(async(field,value)=>{
+    if (field.includes('.')) {
+      await upd(dotToObject(field, value));
+    } else {
+      await upd({[field]:value});
+    }
+    setEditing(null);
+  },[upd]);
   const handleSaveFocus=useCallback(async text=>{await upd({currentWeekFocus:text,currentWeekLabel:weekOf()});},[upd]);
   const handleCloseWeek=useCallback(async(reflection,weekWins,snapshot,weeklyGrowth)=>{
     setData(prev=>{
