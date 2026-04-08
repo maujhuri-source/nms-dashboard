@@ -3,6 +3,23 @@ import { useState, useCallback, useEffect } from "react";
 const STORAGE_KEY = "dashboard_main_v8";
 const GROWTH_KEY  = "dashboard_growth_v8";
 
+const ARJUN_INSTRUCTIONS = [
+  { priority:"TODAY", color:"#D97757", title:"Amazon product research fix",
+    text:`For every post with Amazon products, provide a table at the bottom: Product Name | Amazon Search Term | ASIN (find via web search) | Price Range | Why it fits. I should never need to search Amazon from scratch.` },
+  { priority:"TODAY", color:"#D97757", title:"Simplified Ideogram prompts",
+    text:`Create /skills/ideogram-prompts.md with: our brand colour palette, three pin styles we use, and for every post batch going forward — both the full detailed prompt AND a short 40–50 word Ideogram-optimised version (subject, mood, lighting, colour palette only — no hex codes, no positioning). This file is permanent and updated with every new batch.` },
+  { priority:"TODAY", color:"#D97757", title:"Workflow files reorganisation",
+    text:`Reorganise our workflow files: (1) ARJUN-TASKS.md = max 10 active tasks, current week only — completed tasks move to /workflow/archive/tasks-log.md, (2) MY-TASKS.md = same rule, (3) Create /workflow/daily/[date]-session.md for each session, (4) Create /workflow/DECISIONS.md for key strategic decisions. At session start, read only ARJUN-TASKS.md + MY-TASKS.md + today's session file. Nothing else unless I ask.` },
+  { priority:"THIS WEEK", color:"#5D4E6D", title:"Brevo email setup",
+    text:`Set up Brevo email from scratch: (1) Step-by-step account setup guide, (2) WordPress opt-in form via Brevo plugin or HTML embed, (3) Create 'Newborn Sleep Schedule Tracker' one-page printable PDF, (4) Connect form to auto-deliver PDF on signup, (5) Place form after first paragraph, end of post, and sidebar. Walk me through each step for a beginner.` },
+  { priority:"THIS WEEK", color:"#5D4E6D", title:"Ezoic WordPress setup",
+    text:`Ezoic onboarding — complete DNS setup, add site verification script to WordPress, configure ad placements, verify ads live` },
+  { priority:"NEXT WEEK", color:"#7BA895", title:"Content audit priority queue",
+    text:`From the 40-post audit, identify the top 10 posts most worth updating first. Rank by: (1) existing GA4 traffic, (2) keyword relevance to Pinterest strategy, (3) effort required. Give me a prioritised list with one paragraph per post explaining what specifically needs to change.` },
+  { priority:"JUNE", color:"#C4956A", title:"Wake Window Calculator tool",
+    text:`Build the Wake Window Calculator as a React component embeddable in WordPress. Inputs: baby age in weeks, last wake time. Outputs: next nap window with colour-coded urgency (green/yellow/red), estimated next feed. Email capture for a free personalised daily schedule PDF. Must work on mobile.` },
+];
+
 const DEFAULT_DATA = {
   pageviews: 500, revenue: 0, postsPublished: 0, pinsLive: 0,
   emailSubs: 0, toolsBuilt: 0,
@@ -139,27 +156,7 @@ const MONTHS = [
       {t:"Email list stats documented (size + open rate)"},
       {t:"Tools engagement data documented"},
     ],
-    arjunTasks:["Final Flippa listing copy written","Revenue and traffic summary document created","Site handover documentation prepared"]
-  },
-];
-
-const ARJUN_INSTRUCTIONS = [
-  { priority:"TODAY", color:"#D97757", title:"Amazon product research fix",
-    text:`For every post with Amazon products, provide a table at the bottom: Product Name | Amazon Search Term | ASIN (find via web search) | Price Range | Why it fits. I should never need to search Amazon from scratch.` },
-  { priority:"TODAY", color:"#D97757", title:"Simplified Ideogram prompts",
-    text:`Create /skills/ideogram-prompts.md with: our brand colour palette, three pin styles we use, and for every post batch going forward — both the full detailed prompt AND a short 40–50 word Ideogram-optimised version (subject, mood, lighting, colour palette only — no hex codes, no positioning). This file is permanent and updated with every new batch.` },
-  { priority:"TODAY", color:"#D97757", title:"Workflow files reorganisation",
-    text:`Reorganise our workflow files: (1) ARJUN-TASKS.md = max 10 active tasks, current week only — completed tasks move to /workflow/archive/tasks-log.md, (2) MY-TASKS.md = same rule, (3) Create /workflow/daily/[date]-session.md for each session, (4) Create /workflow/DECISIONS.md for key strategic decisions. At session start, read only ARJUN-TASKS.md + MY-TASKS.md + today's session file. Nothing else unless I ask.` },
-  { priority:"THIS WEEK", color:"#5D4E6D", title:"Brevo email setup",
-    text:`Set up Brevo email from scratch: (1) Step-by-step account setup guide, (2) WordPress opt-in form via Brevo plugin or HTML embed, (3) Create 'Newborn Sleep Schedule Tracker' one-page printable PDF, (4) Connect form to auto-deliver PDF on signup, (5) Place form after first paragraph, end of post, and sidebar. Walk me through each step for a beginner.` },
-  { priority:"THIS WEEK", color:"#5D4E6D", title:"Ezoic WordPress setup",
-    text:`Ezoic onboarding — complete DNS setup, add site verification script to WordPress, configure ad placements, verify ads live` },
-  { priority:"NEXT WEEK", color:"#7BA895", title:"Content audit priority queue",
-    text:`From the 40-post audit, identify the top 10 posts most worth updating first. Rank by: (1) existing GA4 traffic, (2) keyword relevance to Pinterest strategy, (3) effort required. Give me a prioritised list with one paragraph per post explaining what specifically needs to change.` },
-  { priority:"JUNE", color:"#C4956A", title:"Wake Window Calculator tool",
-    text:`Build the Wake Window Calculator as a React component embeddable in WordPress. Inputs: baby age in weeks, last wake time. Outputs: next nap window with colour-coded urgency (green/yellow/red), estimated next feed. Email capture for a free personalised daily schedule PDF. Must work on mobile.` },
-];
-
+    
 // ── helpers ───────────────────────────────────────────────────────────────────
 const fmtK    = v => v >= 1000 ? `${(v/1000).toFixed(1)}K` : String(v||0);
 const fmtKn   = v => v >= 1000 ? `${(v/1000).toFixed(0)}K` : String(v||0);
