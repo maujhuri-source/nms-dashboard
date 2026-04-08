@@ -1092,7 +1092,7 @@ function Dashboard() {
     (async()=>{
       // First try to load from dashboard-data.json (master copy)
       try {
-        const response = await fetch('/dashboard/dashboard-data.json');
+        const response = await fetch('dashboard-data.json');
         if (response.ok) {
           const remote = await response.json();
           // Update tasks from remote
