@@ -19,6 +19,7 @@ const DEFAULT_DATA = {
     lastUpdated: ""
   },
   lastUpdated: null,
+  arjunInstructions: ARJUN_INSTRUCTIONS,
 };
 
 const GOALS = {
@@ -772,8 +773,22 @@ function TimelineTab({milestones, onToggle}) {
 }
 
 // ── ARJUN TASKS TAB ───────────────────────────────────────────────────────────
-function ArjunTab() {
+function ArjunTab({ instructions, onSave }) {
   const [copied, setCopied] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [form, setForm] = useState({ priority: "TODAY", title: "", text: "" });
+
+  const priorityToColor = (pri) => {
+    switch (pri) {
+      case "TODAY": return "#D97757";
+      case "THIS WEEK": return "#5D4E6D";
+      case "NEXT WEEK": return "#7BA895";
+      case "JUNE": return "#C4956A";
+      default: return "#8A9AAA";
+    }
+  };
+
   const copyText = (text, i) => {
     try {
       const el = document.createElement("textarea");
@@ -791,28 +806,146 @@ function ArjunTab() {
       setTimeout(() => setCopied(null), 2000);
     }
   };
+
+  const resetForm = () => {
+    setForm({ priority: "TODAY", title: "", text: "" });
+    setEditId(null);
+    setShowForm(false);
+  };
+
+  const handleSubmit = () => {
+    if (!form.title.trim() || !form.text.trim()) return;
+    let updated;
+    if (editId !== null) {
+      updated = instructions.map((inst, idx) =>
+        idx === editId ? { ...form, color: priorityToColor(form.priority) } : inst
+      );
+    } else {
+      updated = [...instructions, { ...form, color: priorityToColor(form.priority) }];
+    }
+    onSave(updated);
+    resetForm();
+  };
+
+  const handleEdit = (idx) => {
+    const inst = instructions[idx];
+    setForm({ priority: inst.priority, title: inst.title, text: inst.text });
+    setEditId(idx);
+    setShowForm(true);
+  };
+
+  const handleDelete = (idx) => {
+    if (!confirm("Delete this instruction?")) return;
+    const updated = instructions.filter((_, i) => i !== idx);
+    onSave(updated);
+  };
+
+  const priorityOptions = [
+    { value: "TODAY", label: "TODAY", color: "#D97757" },
+    { value: "THIS WEEK", label: "THIS WEEK", color: "#5D4E6D" },
+    { value: "NEXT WEEK", label: "NEXT WEEK", color: "#7BA895" },
+    { value: "JUNE", label: "JUNE", color: "#C4956A" },
+  ];
+
+  const inputStyle = (col) => ({
+    width: "100%",
+    background: "rgba(255,255,255,0.05)",
+    border: `1px solid ${col}30`,
+    borderRadius: 9,
+    color: "white",
+    padding: "9px 11px",
+    fontSize: 13,
+    fontFamily: "inherit",
+    resize: "none",
+    outline: "none",
+    boxSizing: "border-box",
+    lineHeight: 1.6,
+  });
+
   return (
     <div>
       <div style={{background:"rgba(255,255,255,0.03)",borderRadius:12,padding:"12px 16px",marginBottom:16,border:"1px solid rgba(255,255,255,0.06)"}}>
         <div style={{color:"rgba(255,255,255,0.35)",fontSize:9,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:6}}>How to use</div>
         <div style={{fontSize:13,color:"rgba(255,255,255,0.6)",lineHeight:1.6}}>Tap Copy on any instruction and paste directly into your ARJUN session in Claude Code.</div>
       </div>
-      {ARJUN_INSTRUCTIONS.map((inst,i)=>(
-        <div key={i} style={{borderRadius:14,overflow:"hidden",marginBottom:12,border:`1px solid ${inst.color}33`}}>
-          <div style={{background:`${inst.color}18`,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <div>
-              <div style={{fontSize:9,color:inst.color,fontWeight:"bold",letterSpacing:1,marginBottom:2}}>{inst.priority}</div>
-              <div style={{fontSize:14,fontWeight:"bold",color:C.cream,fontFamily:"Georgia, serif"}}>{inst.title}</div>
+
+      {/* Add new button */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+        <div style={{color:"rgba(255,255,255,0.35)",fontSize:9,letterSpacing:"0.1em",textTransform:"uppercase"}}>
+          {instructions.length} instructions
+        </div>
+        <button onClick={() => { resetForm(); setShowForm(true); }} style={{background:showForm && editId===null ? C.terracotta : "rgba(255,255,255,0.07)",border:"none",borderRadius:8,color:showForm && editId===null ? "white" : "rgba(255,255,255,0.5)",fontSize:11,padding:"5px 12px",cursor:"pointer",fontFamily:"inherit",fontWeight:"bold"}}>
+          {showForm && editId===null ? "Cancel" : "+ New Instruction"}
+        </button>
+      </div>
+
+      {/* Add/edit form */}
+      {showForm && (
+        <div style={{background:`linear-gradient(135deg,rgba(74,58,92,0.7),rgba(61,46,74,0.9))`,borderRadius:14,padding:16,marginBottom:16,border:`1px solid ${C.terracotta}33`}}>
+          <div style={{color:"rgba(255,255,255,0.4)",fontSize:9,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:12}}>
+            {editId!==null ? "Edit Instruction" : "New Instruction"}
+          </div>
+
+          <div style={{marginBottom:10}}>
+            <div style={{color:"rgba(255,255,255,0.38)",fontSize:10,marginBottom:4}}>Priority *</div>
+            <div style={{display:"flex",gap:6}}>
+              {priorityOptions.map(opt => (
+                <button key={opt.value} onClick={()=>setForm(p=>({...p,priority:opt.value}))} style={{flex:1,padding:"6px 0",borderRadius:7,border:`1px solid ${form.priority===opt.value?opt.color:opt.color+"44"}`,background:form.priority===opt.value?opt.color+"33":"transparent",color:form.priority===opt.value?opt.color:"rgba(255,255,255,0.3)",fontSize:11,fontWeight:form.priority===opt.value?"bold":"normal",cursor:"pointer",fontFamily:"inherit",transition:"all 0.2s"}}>
+                  {opt.label}
+                </button>
+              ))}
             </div>
-            <button onClick={()=>copyText(inst.text,i)} style={{background:copied===i?C.jade:`${inst.color}30`,border:"none",borderRadius:7,padding:"5px 12px",cursor:"pointer",color:copied===i?"white":inst.color,fontSize:11,fontWeight:"bold",fontFamily:"inherit",transition:"all 0.2s",whiteSpace:"nowrap"}}>
-              {copied===i?"✓ Copied":"Copy"}
+          </div>
+
+          <div style={{marginBottom:10}}>
+            <div style={{color:"rgba(255,255,255,0.38)",fontSize:10,marginBottom:4}}>Title *</div>
+            <input value={form.title} onChange={e=>setForm(p=>({...p,title:e.target.value}))} placeholder="e.g. Amazon product research fix" style={inputStyle(C.jade)} />
+          </div>
+
+          <div style={{marginBottom:14}}>
+            <div style={{color:"rgba(255,255,255,0.38)",fontSize:10,marginBottom:4}}>Full instruction for ARJUN *</div>
+            <textarea rows={4} value={form.text} onChange={e=>setForm(p=>({...p,text:e.target.value}))} placeholder="Paste the full ARJUN instruction here..." style={inputStyle(C.lightJade)} />
+          </div>
+
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={resetForm} style={{flex:1,padding:"8px",background:"rgba(255,255,255,0.04)",border:"none",borderRadius:9,color:"rgba(255,255,255,0.28)",cursor:"pointer",fontFamily:"inherit",fontSize:11}}>Cancel</button>
+            <button onClick={handleSubmit} disabled={!form.title.trim()||!form.text.trim()} style={{flex:2,padding:"8px",background:form.title.trim()&&form.text.trim()?C.terracotta:"rgba(255,255,255,0.1)",border:"none",borderRadius:9,color:"white",fontWeight:"bold",cursor:form.title.trim()&&form.text.trim()?"pointer":"default",fontFamily:"Georgia, serif",fontSize:13}}>
+              {editId!==null ? "Save Changes" : "Add Instruction"}
             </button>
           </div>
-          <div style={{background:`linear-gradient(135deg,${C.midPlum}80,${C.darkPlum})`,padding:"12px 14px",fontSize:13,color:"rgba(255,255,255,0.65)",lineHeight:1.7}}>
-            {inst.text}
-          </div>
         </div>
-      ))}
+      )}
+
+      {/* Instructions list */}
+      {instructions.map((inst,i) => {
+        const color = inst.color || priorityToColor(inst.priority);
+        const isCopied = copied === i;
+        return (
+          <div key={i} style={{borderRadius:14,overflow:"hidden",marginBottom:12,border:`1px solid ${color}33`}}>
+            <div style={{background:`${color}18`,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div>
+                <div style={{fontSize:9,color:color,fontWeight:"bold",letterSpacing:1,marginBottom:2}}>{inst.priority}</div>
+                <div style={{fontSize:14,fontWeight:"bold",color:C.cream,fontFamily:"Georgia, serif"}}>{inst.title}</div>
+              </div>
+              <div style={{display:"flex",gap:6}}>
+                <button onClick={()=>copyText(inst.text,i)} style={{background:isCopied?C.jade:`${color}30`,border:"none",borderRadius:7,padding:"5px 12px",cursor:"pointer",color:isCopied?"white":color,fontSize:11,fontWeight:"bold",fontFamily:"inherit",transition:"all 0.2s",whiteSpace:"nowrap"}}>
+                  {isCopied?"✓ Copied":"Copy"}
+                </button>
+                <button onClick={()=>handleEdit(i)} style={{background:"rgba(255,255,255,0.07)",border:"none",borderRadius:7,padding:"5px 10px",cursor:"pointer",color:"rgba(255,255,255,0.4)",fontSize:11,fontFamily:"inherit"}}>
+                  Edit
+                </button>
+                <button onClick={()=>handleDelete(i)} style={{background:"rgba(255,255,255,0.07)",border:"none",borderRadius:7,padding:"5px 10px",cursor:"pointer",color:"rgba(255,255,255,0.2)",fontSize:11,fontFamily:"inherit"}}>
+                  Delete
+                </button>
+              </div>
+            </div>
+            <div style={{background:`linear-gradient(135deg,${C.midPlum}80,${C.darkPlum})`,padding:"12px 14px",fontSize:13,color:"rgba(255,255,255,0.65)",lineHeight:1.7}}>
+              {inst.text}
+            </div>
+          </div>
+        );
+      })}
+
       <div style={{background:"rgba(255,255,255,0.02)",borderRadius:12,padding:"12px 16px",border:`1px solid ${C.plum}44`,marginTop:4}}>
         <div style={{fontSize:11,fontWeight:"bold",color:C.lightJade,marginBottom:6}}>ARJUN session rule</div>
         <div style={{fontSize:13,color:"rgba(255,255,255,0.5)",lineHeight:1.6}}>Friday is your only planning day. All other sessions must end with a published post, scheduled pins, or a completed PDF. Planning without output is not progress.</div>
@@ -1155,6 +1288,13 @@ export default function Dashboard() {
               pinterestSaves: remote.pinterest.saves || prev.pinterestSaves
             }));
           }
+          // Update arjunInstructions from remote (if any)
+          if (remote.arjunInstructions) {
+            setData(prev => ({
+              ...prev,
+              arjunInstructions: remote.arjunInstructions
+            }));
+          }
         }
       } catch (err) {
         // Fall back to localStorage if fetch fails (offline)
@@ -1217,6 +1357,10 @@ export default function Dashboard() {
     setParkedTasks(updated);
     await dsSet(PARKED_KEY, updated);
   }, []);
+
+  const handleSaveArjunInstructions = useCallback(async (updated) => {
+    await upd({ arjunInstructions: updated });
+  }, [upd]);
 
   const handleEdit=useCallback(f=>setEditing(f),[]);
   const handleSave=useCallback(async(field,value)=>{
@@ -1288,7 +1432,7 @@ export default function Dashboard() {
         {tab==="metrics"&&<MetricsTab data={data} onEdit={handleEdit}/>}
         {tab==="journal"&&<JournalTab data={data} growth={growth} onSaveFocus={handleSaveFocus} onCloseWeek={handleCloseWeek} onAddWin={handleAddWin}/>}
         {tab==="timeline"&&<TimelineTab milestones={milestones} onToggle={toggleMilestone}/>}
-        {tab==="arjun"&&<ArjunTab/>}
+        {tab==="arjun"&&<ArjunTab instructions={data.arjunInstructions} onSave={handleSaveArjunInstructions} />}
         {tab==="tasks"&&<TasksTab tasks={tasks} />}
         {tab==="parked"&&<ParkedTasksTab tasks={parkedTasks} onSave={handleSaveParked}/>}
         {data.lastUpdated&&<div style={{textAlign:"center",color:"rgba(255,255,255,0.13)",fontSize:10,marginTop:16}}>Last updated {new Date(data.lastUpdated).toLocaleDateString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</div>}
